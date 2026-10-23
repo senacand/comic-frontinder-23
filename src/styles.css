@@ -107,6 +107,8 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 .collection-main { overflow-y: auto; }
 .collection-page { max-width: 1400px; margin: auto; padding: 24px; }
 .collection-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.map-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-left: auto; padding: 10px 12px; background: #eee5f6; color: #77558f; border: 1px solid #e0d3ed; border-radius: 9px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.map-button:hover:not(:disabled) { background: #e5d8f0; }
 .collection-heading h1 { font: 600 26px 'Outfit', sans-serif; letter-spacing: -.5px; }
 .collection-count { background: #e9e1f1; color: #7c5c95; padding: 3px 9px; border-radius: 12px; font-size: 12px; }
 .collection-page > .empty-state { min-height: 50dvh; }
@@ -196,6 +198,8 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
   .empty-state h2 { font-size: 22px; }
   .collection-page { padding: 16px 12px; }
   .collection-heading { margin-bottom: 16px; }
+  .collection-heading { flex-wrap: wrap; gap: 8px; }
+  .map-button { font-size: 11px; padding: 9px 10px; }
   .collection-heading h1 { font-size: 23px; }
   .results-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .result-card { display: grid; grid-template-columns: 120px minmax(0, 1fr); min-height: 165px; }

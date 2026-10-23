@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AppController } from './controller';
 import './styles.css';
+import './explore-motion.css';
 
 const controller = new AppController();
 createRoot(document.getElementById('root')!).render(<App controller={controller}/>);

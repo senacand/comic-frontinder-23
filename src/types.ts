@@ -1,6 +1,6 @@
 export type Language = 'id' | 'en';
 export type Page = 'discover' | 'recommendations' | 'saved';
-export interface Fandom { id: number; name: string }
+export interface Fandom { id: number; name: string; kind: string }
 export interface Booth {
   id: string;
   name: string;

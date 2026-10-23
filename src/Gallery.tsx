@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Copy } from './copy';
 import type { Booth } from './types';
 import { Icon } from './icons';
+import { useReducedMotion } from './explore-motion';
 
 export function RemoteImage({ src, alt, t, ...props }: { src: string; alt: string; t: Copy; loading?: 'lazy' | 'eager'; className?: string }) {
   const [failed, setFailed] = useState(false);
@@ -16,6 +17,7 @@ export function RemoteImage({ src, alt, t, ...props }: { src: string; alt: strin
 }
 
 export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Copy; fullscreen?: boolean }) {
+  const reducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(false);
   const track = useRef<HTMLDivElement>(null);
@@ -24,7 +26,7 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
   const [enlarged, setEnlarged] = useState(false);
   const scroll = (next: number) => {
     const target = Math.max(0, Math.min(booth.gallery.length - 1, next));
-    track.current?.scrollTo({ left: target * track.current.clientWidth, behavior: 'smooth' });
+    track.current?.scrollTo({ left: target * track.current.clientWidth, behavior: reducedMotion ? 'auto' : 'smooth' });
     setIndex(target); setEnlarged(false);
   };
   useEffect(() => {
@@ -35,19 +37,20 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
     <div className="gallery-track" ref={track} onScroll={event => {
       const el = event.currentTarget;
       if (el.clientWidth) setIndex(Math.round(el.scrollLeft / el.clientWidth));
-    }} tabIndex={0} aria-label={`${t.catalog}: ${booth.name}`} onKeyDown={event => {
+    }} tabIndex={0} aria-label={`${t.catalog}: ${booth.name}`} onDoubleClick={() => { setEnlarged(false); setZoom(true); }} onKeyDown={event => {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); event.stopPropagation(); scroll(index + (event.key === 'ArrowRight' ? 1 : -1)); }
     }}>
       {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><RemoteImage src={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} loading={i === 0 ? 'eager' : 'lazy'}/></div>)}
     </div>
     <span className="catalog-label"><Icon name="image" size={14}/> {t.catalog}</span>
-    <span className="image-counter">{index + 1} / {booth.gallery.length}</span>
+    <span className="image-counter"><span key={index} className="counter-tick">{index + 1}</span> / {booth.gallery.length}</span>
     {booth.gallery.length > 1 && <>
       <button className="gallery-arrow gallery-prev" aria-label={t.previous} disabled={index === 0} onClick={() => scroll(index - 1)}><Icon name="left"/></button>
       <button className="gallery-arrow gallery-next" aria-label={t.next} disabled={index >= booth.gallery.length - 1} onClick={() => scroll(index + 1)}><Icon name="right"/></button>
     </>}
     <button ref={opener} className="zoom-button" aria-label={t.zoom} onClick={() => { setEnlarged(false); setZoom(true); }}><Icon name="zoom" size={18}/></button>
-    <div className="gallery-dots" aria-hidden="true">{booth.gallery.length <= 12 && booth.gallery.map((_, i) => <span className={i === index ? 'active' : ''} key={i}/>)}</div>
+    {booth.gallery.length > 1 && <div className="gallery-progress" aria-hidden="true"><span style={{ transform: `scaleX(${(index + 1) / booth.gallery.length})` }}/></div>}
+    <div className="gallery-dots" role="group" aria-label={t.catalogPages}>{booth.gallery.length > 1 && booth.gallery.length <= 12 && booth.gallery.map((_, i) => <button className={i === index ? 'active' : ''} key={i} aria-label={`${t.catalog} ${i + 1}`} aria-pressed={i === index} onClick={() => scroll(i)}/>)}</div>
     <dialog ref={dialog} className="zoom-dialog" aria-label={`${t.zoom}: ${booth.name}`} onClose={() => { setZoom(false); opener.current?.focus(); }} onCancel={() => setZoom(false)}>
       <div className="zoom-toolbar"><span>{booth.name} · {index + 1}/{booth.gallery.length}</span><button className="icon-button" aria-label={t.close} onClick={() => setZoom(false)}><Icon name="close"/></button></div>
       <div className={`zoom-canvas ${enlarged ? 'enlarged' : ''}`}>

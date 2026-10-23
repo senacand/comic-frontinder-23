@@ -3,15 +3,18 @@ import type { BatchCard, BatchRequest, Booth, Decision, InterestProfile, Snapsho
 export const COOLDOWN = 72 * 60 * 60 * 1000;
 export const unique = (ids: number[]) => [...new Set(ids)];
 
-export function buildProfile(decisions: Record<string, Decision>, known: Set<number>): InterestProfile {
+export function buildProfile(decisions: Record<string, Decision>, known: Set<number>, generic: Set<number> = new Set()): InterestProfile {
   const profile: InterestProfile = {};
   for (const decision of Object.values(decisions)) {
     const ids = unique(decision.fandomIds).filter(id => known.has(id));
+    const hasSpecific = ids.some(id => !generic.has(id));
     for (const id of ids) {
       const item = profile[id] ??= { positive: 0, negative: 0, evidence: 0, interest: 0, confidence: 0 };
-      if (decision.kind === 'like') item.positive += 1 / ids.length;
-      else item.negative += 0.2 / ids.length;
-      item.evidence += 1 / ids.length;
+      // A mixed booth's reaction says much less about its broad category.
+      const evidence = (generic.has(id) && hasSpecific ? 0.25 : 1) / ids.length;
+      if (decision.kind === 'like') item.positive += evidence;
+      else item.negative += 0.2 * evidence;
+      item.evidence += evidence;
     }
   }
   for (const item of Object.values(profile)) {
@@ -21,6 +24,32 @@ export function buildProfile(decisions: Record<string, Decision>, known: Set<num
   return profile;
 }
 
+export function catalogProfile(snapshot: Snapshot, decisions: Record<string, Decision>) {
+  const generic = new Set(snapshot.fandoms.filter(f => f.kind === 'generic_tag').map(f => f.id));
+  const profile = buildProfile(decisions, new Set(snapshot.fandoms.map(f => f.id)), generic);
+  const frequency = new Map<number, number>();
+  for (const booth of snapshot.booths) {
+    for (const id of unique(booth.fandomIds)) {
+      if (generic.has(id)) frequency.set(id, (frequency.get(id) ?? 0) + 1);
+    }
+  }
+  // A ubiquitous category is less informative, even after an interest is established.
+  // Keep at least half its weight so genuine broad-category preferences still matter.
+  const prevalence = (id: number) => (frequency.get(id) ?? 0) / Math.max(1, snapshot.booths.length);
+  const weight = (id: number) => generic.has(id) ? 1 - 0.5 * prevalence(id) : 1;
+  for (const [key, item] of Object.entries(profile)) {
+    const id = Number(key);
+    if (generic.has(id)) {
+      // Require 1–3 full likes' worth of evidence, according to catalog share.
+      // This affects positive affinity, never stored feedback or negative signals.
+      const requiredPositive = 1 + 2 * prevalence(id);
+      if (item.interest > 0 && item.positive + 1e-9 < requiredPositive) item.interest = 0;
+    }
+    item.interest *= weight(id);
+  }
+  return { profile, weight };
+}
+
 export function affinity(booth: Booth, profile: InterestProfile): number {
   return booth.fandomIds.length
     ? booth.fandomIds.reduce((sum, id) => sum + (profile[id]?.interest ?? 0), 0) / booth.fandomIds.length
@@ -28,7 +57,7 @@ export function affinity(booth: Booth, profile: InterestProfile): number {
 }
 
 export function recommendations(snapshot: Snapshot, decisions: Record<string, Decision>) {
-  const profile = buildProfile(decisions, new Set(snapshot.fandoms.map(f => f.id)));
+  const { profile } = catalogProfile(snapshot, decisions);
   return snapshot.booths.map(booth => ({
     booth, score: affinity(booth, profile),
     matching: booth.fandomIds.filter(id => (profile[id]?.interest ?? 0) > 0)
@@ -48,8 +77,7 @@ export function noise(seed: number, key: string): number {
 
 export function generateBatch(request: BatchRequest): BatchCard[] {
   const { snapshot, decisions, now, revisit, seed, sequence } = request;
-  const known = new Set(snapshot.fandoms.map(f => f.id));
-  const profile = buildProfile(decisions, known);
+  const { profile, weight } = catalogProfile(snapshot, decisions);
   const excluded = new Set(request.excluded);
   let candidates = snapshot.booths.filter(booth => {
     if (excluded.has(booth.id)) return false;
@@ -71,7 +99,7 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
     let reason = slots[slot];
     const jitter = (b: Booth) => noise(seed, `${sequence}:${slot}:${b.id}`);
     const learning = (b: Booth) => b.fandomIds.length
-      ? b.fandomIds.reduce((sum, id) => sum + (1 - (profile[id]?.confidence ?? 0)) / (1 + (coverage.get(id) ?? 0)), 0) / b.fandomIds.length
+      ? b.fandomIds.reduce((sum, id) => sum + weight(id) * (1 - (profile[id]?.confidence ?? 0)) / (1 + (coverage.get(id) ?? 0)), 0) / b.fandomIds.length
       : 0;
     if (reason === 'interest' && !pool.some(b => affinity(b, profile) > 0)) reason = 'learning';
     if (reason === 'learning' && !pool.some(b => learning(b) > 0)) reason = 'random';
@@ -79,7 +107,7 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
       if (reason === 'random') return jitter(b);
       if (reason === 'learning') return learning(b);
       const chosenFandoms = new Set(result.flatMap(c => c.booth.fandomIds));
-      const overlap = b.fandomIds.length ? b.fandomIds.filter(id => chosenFandoms.has(id)).length / b.fandomIds.length : 0;
+      const overlap = b.fandomIds.length ? b.fandomIds.reduce((sum, id) => sum + (chosenFandoms.has(id) ? weight(id) : 0), 0) / b.fandomIds.length : 0;
       return affinity(b, profile) - 0.15 * overlap + jitter(b) * 0.0001;
     };
     pool.sort((a, b) => {

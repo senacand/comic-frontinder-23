@@ -18,7 +18,7 @@ const workerUrl = new URL(worker[1], `http://localhost/${scriptPath.replace(/^\.
 const server = createServer(async (request, response) => {
   try {
     let route = new URL(request.url, 'http://localhost').pathname;
-    if (route.startsWith('/cf23-discovery/')) route = route.slice('/cf23-discovery'.length);
+    if (route.startsWith('/comic-frontinder-23/')) route = route.slice('/comic-frontinder-23'.length);
     if (route === '/') route = '/index.html';
     const target = path.resolve(dist, `.${decodeURIComponent(route)}`);
     if (!target.startsWith(dist + path.sep)) { response.writeHead(403).end(); return; }
@@ -30,7 +30,7 @@ const server = createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 try {
   const port = server.address().port;
-  for (const prefix of ['/', '/cf23-discovery/']) {
+  for (const prefix of ['/', '/comic-frontinder-23/']) {
     const base = `http://127.0.0.1:${port}${prefix}`;
     for (const hash of ['', '#/discover', '#/recommendations', '#/saved']) {
       const response = await fetch(base + hash);

@@ -20,7 +20,7 @@ export function parseSnapshot(catalogRaw: unknown, fandomRaw: unknown, version: 
   const fandoms = directory.fandoms.map(value => {
     const f = object(value);
     if (!Number.isInteger(f.id) || typeof f.name !== 'string') throw new Error('Invalid fandom');
-    return { id: f.id as number, name: f.name };
+    return { id: f.id as number, name: f.name, kind: typeof f.kind === 'string' ? f.kind : 'unknown' };
   });
   const known = new Set(fandoms.map(f => f.id));
   if (known.size !== fandoms.length) throw new Error('Duplicate fandom IDs');
@@ -61,7 +61,7 @@ export function validSnapshot(raw: unknown): raw is Snapshot {
   try {
     const s = raw as Snapshot;
     return Number.isInteger(s.version) && s.version >= 0 && Array.isArray(s.fandoms) && Array.isArray(s.booths) &&
-      s.fandoms.every(f => Number.isInteger(f.id) && typeof f.name === 'string') &&
+      s.fandoms.every(f => Number.isInteger(f.id) && typeof f.name === 'string' && typeof f.kind === 'string') &&
       s.booths.every(validBooth) && new Set(s.booths.map(b => b.id)).size === s.booths.length;
   } catch { return false; }
 }

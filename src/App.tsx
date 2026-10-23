@@ -4,6 +4,9 @@ import { copy, type Copy } from './copy';
 import { recommendations } from './engine';
 import { Gallery, RemoteImage } from './Gallery';
 import { Icon } from './icons';
+import { creatorListMapUrl } from './map-link';
+import { useDecisionMotion } from './explore-motion';
+import { Reaction } from './Reaction';
 import type { Booth, Language, Page, Snapshot } from './types';
 
 const pageFromHash = (): Page => {
@@ -42,7 +45,7 @@ function Detail({ booth, snapshot, t, language, saved, toggle, close }: { booth:
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { dialog.current?.showModal(); }, []);
   return <dialog className="detail-dialog" ref={dialog} onCancel={close} onClose={close} aria-label={booth.name} onClick={e => { if (e.target === dialog.current) close(); }}>
-    <div className="detail-toolbar"><span className="mini-label">CIRCLE CRUSH</span><button className="icon-button" onClick={close} aria-label={t.close}><Icon name="close"/></button></div>
+    <div className="detail-toolbar"><span className="mini-label">Comic Frontinder</span><button className="icon-button" onClick={close} aria-label={t.close}><Icon name="close"/></button></div>
     <Gallery booth={booth} t={t} fullscreen/>
     <div className="detail-body"><h2>{booth.name}</h2><Location booth={booth} t={t} language={language}/><Fandoms booth={booth} snapshot={snapshot} t={t}/>
       <div className="detail-actions"><button className={`primary-button ${saved ? 'is-saved' : ''}`} onClick={toggle}><Icon name={saved ? 'check' : 'bookmark'}/>{saved ? t.unsave : t.save}</button>{booth.catalogUrl && <a href={booth.catalogUrl} target="_blank" rel="noreferrer" className="source-link">{t.source}<Icon name="external" size={15}/></a>}</div>
@@ -57,12 +60,19 @@ export default function App({ controller }: { controller: AppController }) {
   const [detail, setDetail] = useState<Booth>();
   const [limit, setLimit] = useState(20);
   const [fandomFilter, setFandomFilter] = useState<number>();
-  const [acting, setActing] = useState(false);
   const current = visitor.batches[0]?.[0]?.booth;
+  const { displayed, reaction, acting, decide } = useDecisionMotion(current, kind => controller.decide(kind));
   const next = visitor.batches.flat()[1]?.booth.gallery[0];
   const ranked = useMemo(() => snapshot ? recommendations(snapshot, visitor.decisions) : [], [snapshot, visitor.decisions]);
   const activeDetail = detail && (snapshot?.booths.find(b => b.id === detail.id) ?? detail);
   const filtered = fandomFilter ? ranked.filter(item => item.matching.includes(fandomFilter)) : ranked;
+  const mapUrl = useMemo(() => {
+    if (!snapshot || page === 'discover') return undefined;
+    const currentIds = new Set(snapshot.booths.map(b => b.id));
+    const ids = page === 'recommendations' ? filtered.map(item => item.booth.id)
+      : Object.keys(visitor.saved).filter(id => currentIds.has(id));
+    return creatorListMapUrl(ids);
+  }, [snapshot, page, filtered, visitor.saved]);
   const recommendedFandoms = useMemo(() => {
     if (!snapshot) return [];
     const ids = new Set(ranked.flatMap(r => r.matching));
@@ -78,11 +88,6 @@ export default function App({ controller }: { controller: AppController }) {
     if (fandomFilter && !recommendedFandoms.some(f => f.id === fandomFilter)) setFandomFilter(undefined);
   }, [fandomFilter, recommendedFandoms]);
   useEffect(() => { if (next) { const image = new Image(); image.src = next; } }, [next]);
-  const decide = async (kind: 'like' | 'pass') => {
-    if (acting || !current) return;
-    setActing(true);
-    try { await controller.decide(kind); } finally { setActing(false); }
-  };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (page !== 'discover' || detail || document.querySelector('dialog[open]') || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
@@ -93,19 +98,19 @@ export default function App({ controller }: { controller: AppController }) {
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   });
   return <div className="app-shell">
-    <header className="site-header"><a className="brand" href="#/discover" aria-label="Circle Crush"><span className="brand-mark"><Icon name="heart" size={23}/></span><span>circle<span className="brand-accent">crush</span><span className="brand-dot">✳</span></span></a>
+    <header className="site-header"><a className="brand" href="#/discover" aria-label="Comic Frontinder"><span className="brand-mark"><Icon name="heart" size={23}/></span><span>Comic <span className="brand-accent">Frontinder</span></span></a>
       <nav className="main-nav" aria-label={language === 'id' ? 'Navigasi utama' : 'Main navigation'}>
-        {(['discover', 'recommendations', 'saved'] as const).map(p => <a key={p} href={`#/${p}`} className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined}><Icon name={p === 'discover' ? 'compass' : p === 'recommendations' ? 'sparkle' : 'bookmark'} size={18}/><span>{t[p]}</span>{p === 'saved' && Object.keys(visitor.saved).length > 0 && <span className="nav-count">{Object.keys(visitor.saved).length}</span>}</a>)}
+        {(['discover', 'recommendations', 'saved'] as const).map(p => <a key={p} href={`#/${p}`} className={page === p ? 'active' : ''} aria-current={page === p ? 'page' : undefined}><Icon name={p === 'discover' ? 'compass' : p === 'recommendations' ? 'sparkle' : 'bookmark'} size={18}/><span>{t[p]}</span>{p === 'saved' && Object.keys(visitor.saved).length > 0 && <span key={Object.keys(visitor.saved).length} className="nav-count">{Object.keys(visitor.saved).length}</span>}</a>)}
       </nav><div className="language-switch" aria-label="Language">{(['id', 'en'] as const).map(l => <button key={l} lang={l} aria-pressed={language === l} onClick={() => controller.setLanguage(l)}>{l.toUpperCase()}</button>)}</div>
     </header>
     <main id="main" className={page === 'discover' ? 'discover-main' : 'collection-main'}>
       {page === 'discover' && <>
         <section className="discovery-layout">
-          <div className="discovery-center">
+          <div className={`discovery-center ${reaction ? `is-${reaction}` : ''}`}>
             {loading ? <div className="booth-card"><Empty icon="heart" title={t.loading} body={t.loadingBody}><span className="loading-dots" aria-label={t.loading}><i/><i/><i/></span></Empty></div>
               : error ? <div className="booth-card"><Empty icon="image" title={t.failure} body={t.failureBody}><button className="primary-button" onClick={() => void controller.refresh()}>{t.retry}</button><details className="error-details"><summary>{t.errorDetails}</summary><pre>{error}</pre></details></Empty></div>
-              : snapshot && current ? <>
-                <article className="booth-card" key={current.id}><Gallery booth={current} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{current.name}</h2>{current.catalogUrl && <a className="icon-button" href={current.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}</div><Location booth={current} t={t} language={language}/><Fandoms booth={current} snapshot={snapshot} t={t}/></div></article>
+              : snapshot && displayed ? <>
+                <article className={`booth-card explore-card ${reaction ? `exit-${reaction}` : 'card-enter'}`} key={displayed.id}><Gallery booth={displayed} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{displayed.name}</h2>{displayed.catalogUrl && <a className="icon-button" href={displayed.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}</div><Location booth={displayed} t={t} language={language}/><Fandoms booth={displayed} snapshot={snapshot} t={t}/></div>{reaction && <Reaction kind={reaction}/>}</article>
                 <div className="decision-controls"><button className="pass-button" disabled={acting} onClick={() => void decide('pass')}><Icon name="close" size={23}/>{t.pass}<kbd>P</kbd></button><button className="like-button" disabled={acting} onClick={() => void decide('like')}><Icon name="heart" size={23}/>{t.like}<kbd>L</kbd></button></div>
               </> : snapshot && generating ? <div className="booth-card card-skeleton" aria-busy="true"><div/><span/><span/></div>
               : snapshot && <div className="booth-card"><Empty icon={snapshot.booths.length ? 'check' : 'image'} title={generationError ? t.feedFailure : snapshot.booths.length ? t.exhausted : t.noCatalog} body={generationError ? t.failureBody : snapshot.booths.length ? t.exhaustedBody : t.noCatalogBody}>
@@ -115,7 +120,7 @@ export default function App({ controller }: { controller: AppController }) {
           </div>
         </section>
       </>}
-      {page !== 'discover' && <section className="collection-page"><div className="collection-heading"><h1>{t[page]}</h1><span className="collection-count">{page === 'saved' ? Object.keys(visitor.saved).length : ranked.length}</span></div>
+      {page !== 'discover' && <section className="collection-page"><div className="collection-heading"><h1>{t[page]}</h1><span className="collection-count">{page === 'saved' ? Object.keys(visitor.saved).length : ranked.length}</span>{mapUrl ? <a className="map-button" href={mapUrl} target="_blank" rel="noopener noreferrer"><Icon name="pin" size={16}/>{t.openInMap}<Icon name="external" size={14}/></a> : <button className="map-button" disabled><Icon name="pin" size={16}/>{t.openInMap}</button>}</div>
         {!snapshot ? <Empty title={loading ? t.loading : t.failure} body={loading ? t.loadingBody : t.failureBody}>{!loading && <button className="primary-button" onClick={() => void controller.refresh()}>{t.retry}</button>}</Empty>
           : page === 'recommendations' ? <>
             {ranked.length > 0 && <div className="filter-row"><button className={!fandomFilter ? 'active' : ''} onClick={() => { setFandomFilter(undefined); setLimit(20); }}>{t.all}<span>{ranked.length}</span></button>{recommendedFandoms.map(f => <button key={f.id} className={fandomFilter === f.id ? 'active' : ''} onClick={() => { setFandomFilter(f.id); setLimit(20); }}>{f.name}</button>)}</div>}

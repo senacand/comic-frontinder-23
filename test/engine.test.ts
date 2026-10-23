@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { affinity, buildProfile, COOLDOWN, generateBatch, recommendations } from '../src/engine';
+import { affinity, buildProfile, catalogProfile, COOLDOWN, generateBatch, recommendations } from '../src/engine';
 import type { BatchRequest, Decision } from '../src/types';
 import { booth, snapshot } from './fixtures';
 
@@ -82,6 +82,103 @@ describe('recommendations', () => {
     expect(results.map(r => r.booth.id)).toEqual(['a', 'b']);
     expect(results[0].matching).toEqual([1]);
     expect(recommendations(s, {})).toEqual([]);
+  });
+});
+
+describe('generic fandom tags', () => {
+  const catalog = () => {
+    const s = snapshot([
+      ...Array.from({ length: 30 }, (_, i) => booth(`original-${i}`, [1])),
+      booth('mixed', [1, 2]), booth('specific', [2]), booth('other', [3]),
+    ]);
+    s.fandoms[0] = { id: 1, name: 'Original', kind: 'generic_tag' };
+    return s;
+  };
+  it('does not infer Original affinity from a few mixed-fandom likes', () => {
+    const decisions = { a: decision('like', [1, 2]), b: decision('like', [1, 2]), c: decision('like', [1, 2]) };
+    const { profile } = catalogProfile(catalog(), decisions);
+    expect(profile[1].positive).toBeCloseTo(3 * .25 / 2);
+    expect(profile[1].interest).toBe(0);
+    expect(profile[1].confidence).toBeGreaterThan(0);
+    expect(profile[2].interest).toBeGreaterThan(0);
+    const result = recommendations(catalog(), decisions);
+    expect(result.map(r => r.booth.id)).toEqual(['specific', 'mixed']);
+    expect(result.every(r => !r.matching.includes(1))).toBe(true);
+  });
+  it('allows established Original preferences while reducing common-tag dominance', () => {
+    const decisions = { a: decision('like', [1]), b: decision('like', [1]), c: decision('like', [2]), d: decision('like', [1]) };
+    const { profile } = catalogProfile(catalog(), decisions);
+    expect(profile[1].interest).toBeGreaterThan(0);
+    expect(profile[1].interest).toBeLessThan(2 / 3);
+    expect(profile[2].interest).toBe(.5);
+    const result = recommendations(catalog(), decisions);
+    expect(result[0].booth.id).toBe('specific');
+    expect(result.some(r => r.booth.id === 'original-0' && r.matching.includes(1))).toBe(true);
+    const cards = generateBatch(request({ snapshot: catalog(), decisions }));
+    expect(cards.some(c => c.reason === 'interest' && c.booth.fandomIds.includes(1))).toBe(true);
+  });
+  it('requires distinct booth evidence and preserves weak generic negatives', () => {
+    const decisions = { a: decision('like', [1]) };
+    decisions.a = decision('like', [1]);
+    expect(catalogProfile(catalog(), decisions).profile[1].interest).toBe(0);
+    const mixedPass = catalogProfile(catalog(), { a: decision('pass', [1, 2]) }).profile;
+    expect(mixedPass[1].negative).toBeCloseTo(.025);
+    expect(mixedPass[1].interest).toBeLessThan(0);
+    expect(mixedPass[2].negative).toBeCloseTo(.1);
+  });
+  it('can establish generic interest from enough mixed evidence without generic-only booths', () => {
+    const decisions = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [String(i), decision('like', [1, 2])]));
+    expect(catalogProfile(catalog(), decisions).profile[1].positive).toBe(3);
+    expect(catalogProfile(catalog(), decisions).profile[1].interest).toBeGreaterThan(0);
+  });
+  it('uses registry kinds rather than a hardcoded Original name or ID', () => {
+    const s = catalog();
+    s.fandoms[0].kind = 'franchise';
+    s.fandoms[2] = { id: 3, name: 'Anime', kind: 'generic_tag' };
+    const { profile } = catalogProfile(s, { a: decision('like', [1, 3]) });
+    expect(profile[1].interest).toBeGreaterThan(0);
+    expect(profile[3].interest).toBe(0);
+  });
+  it('handles fractional evidence at a prevalence-derived threshold', () => {
+    const s = snapshot(Array.from({ length: 12 }, (_, i) => booth(String(i), i < 6 ? [1, 2, 3] : [4])));
+    s.fandoms.slice(0, 3).forEach(f => { f.kind = 'generic_tag'; });
+    const decisions = Object.fromEntries(Array.from({ length: 6 }, (_, i) => [String(i), decision('like', [1, 2, 3])]));
+    expect(catalogProfile(s, decisions).profile[1].interest).toBeGreaterThan(0);
+  });
+  it('prefers specific unknown fandoms over a common generic tag in learning slots', () => {
+    const cards = generateBatch(request({ snapshot: catalog() }));
+    expect(cards[0].booth.id).not.toMatch(/^original-/);
+    expect(cards[0].booth.fandomIds.some(id => id !== 1)).toBe(true);
+  });
+  it('still recommends Original when it is the entire catalog and the interest is established', () => {
+    const s = catalog(); s.booths = s.booths.filter(b => b.fandomIds.length === 1 && b.fandomIds[0] === 1);
+    const decisions = { a: decision('like', [1]), b: decision('like', [1]), c: decision('like', [1]) };
+    expect(recommendations(s, decisions)).toHaveLength(30);
+    expect(catalogProfile(s, decisions).profile[1].interest).toBeCloseTo(3 / 8);
+  });
+  it('requires more evidence for a common tag than a rare tag, and recalculates on catalog changes', () => {
+    const makeCatalog = (tagged: number, total: number) => {
+      const s = snapshot(Array.from({ length: total }, (_, i) => booth(String(i), i < tagged ? [1] : [2])));
+      s.fandoms[0].kind = 'generic_tag';
+      return s;
+    };
+    const decisions = { a: decision('like', [1]), b: decision('like', [1]) };
+    const rare = makeCatalog(1, 10), common = makeCatalog(8, 10);
+    expect(catalogProfile(rare, decisions).profile[1].interest).toBeGreaterThan(0);
+    expect(catalogProfile(common, decisions).profile[1].interest).toBe(0);
+    expect(catalogProfile(common, { ...decisions, c: decision('like', [1]) }).profile[1].interest).toBeGreaterThan(0);
+    expect(catalogProfile(rare, decisions).profile[1].interest).toBeGreaterThan(0);
+    expect(Object.keys(decisions)).toHaveLength(2);
+  });
+  it('uses catalog share rather than the absolute number of booths', () => {
+    const makeCatalog = (total: number) => {
+      const s = snapshot(Array.from({ length: total }, (_, i) => booth(String(i), i < total / 5 ? [1, 1] : [2])));
+      s.fandoms[0].kind = 'generic_tag';
+      return s;
+    };
+    const decisions = { a: decision('like', [1]), b: decision('like', [1]) };
+    expect(catalogProfile(makeCatalog(10), decisions).profile[1].interest)
+      .toBeCloseTo(catalogProfile(makeCatalog(100), decisions).profile[1].interest);
   });
 });
 

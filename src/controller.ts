@@ -101,7 +101,7 @@ export class AppController {
       this.update({ loading: false, error: undefined });
       void this.fill();
     } catch (error) {
-      console.error('Circle Crush: catalog startup/update failed', error);
+      console.error('Comic Frontinder: catalog startup/update failed', error);
       if (!this.state.snapshot) this.update({ loading: false, error: String(error) });
     }
   }
@@ -134,7 +134,7 @@ export class AppController {
         await this.save({ ...latest, sequence: latest.sequence + 1, batches: [...latest.batches, usable] });
       }
     } catch (error) {
-      console.error('Circle Crush: recommendation generation failed', error);
+      console.error('Comic Frontinder: recommendation generation failed', error);
       this.update({ generationError: true, generationErrorDetail: error instanceof Error ? error.message : String(error) });
     }
     finally { this.update({ generating: false }); }

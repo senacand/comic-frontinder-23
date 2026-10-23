@@ -31,6 +31,7 @@ describe('catalog validation and atomic updates', () => {
     const result = parseSnapshot(raw, rawFandoms, 2);
     expect(result.booths).toHaveLength(1);
     expect(result.booths[0].fandomIds).toEqual([1]);
+    expect(result.fandoms[0].kind).toBe('generic_tag');
     expect(validSnapshot(result)).toBe(true);
     expect(validSnapshot({ version: 1 })).toBe(false);
     expect(() => parseSnapshot({}, rawFandoms, 1)).toThrow();
@@ -43,6 +44,16 @@ describe('catalog validation and atomic updates', () => {
     expect((await client.refresh()).version).toBe(1);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(storage.write).not.toHaveBeenCalled();
+  });
+  it('redownloads legacy snapshots missing fandom kinds without touching visitor data', async () => {
+    const storage = new MemoryStorage();
+    const old = snapshot();
+    storage.records.set('snapshot', { ...old, fandoms: old.fandoms.map(({ id, name }) => ({ id, name })) });
+    storage.records.set('visitor', { saved: ['keep'], decisions: { a: 'keep' } });
+    const client = new CatalogClient(storage, responses(manifest(1), rawCatalog(), rawFandoms, manifest(1)));
+    expect(await client.cached()).toBeUndefined();
+    expect((await client.refresh()).fandoms[0].kind).toBe('generic_tag');
+    expect(storage.records.get('visitor')).toEqual({ saved: ['keep'], decisions: { a: 'keep' } });
   });
   it('deduplicates requests and writes catalog/fandoms/version as one record', async () => {
     const storage = new MemoryStorage();
