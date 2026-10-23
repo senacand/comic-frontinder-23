@@ -45,9 +45,14 @@ describe('discovery batches', () => {
     expect(result[0].booth.id).toBe('b');
     expect(result.every(c => c.reason !== 'interest')).toBe(true);
   });
-  it('breaks equal learning value toward clearer single-fandom evidence', () => {
-    const result = generateBatch(request({ snapshot: snapshot([booth('single', [1]), booth('broad', [2, 3, 4])]) }));
-    expect(result[0].booth.id).toBe('single');
+  it('favors clearer learning evidence without locking every visitor to the same booth', () => {
+    const s = snapshot([booth('single', [1]), booth('broad', [2, 3, 4])]);
+    let single = 0;
+    for (let seed = 0; seed < 1024; seed++) {
+      if (generateBatch(request({ snapshot: s, seed }))[0].booth.id === 'single') single++;
+    }
+    expect(single).toBeGreaterThan(512);
+    expect(single).toBeLessThan(700);
   });
   it('prioritizes unseen over strongly matching cooled-down passes', () => {
     const result = generateBatch(request({ snapshot: snapshot([booth('passed'), booth('unseen', [2])]),

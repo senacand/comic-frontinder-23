@@ -72,7 +72,7 @@ export default function App({ controller }: { controller: AppController }) {
   const { displayed, reaction, acting, decide } = useDecisionMotion(current, kind => controller.decide(kind));
   const next = visitor.batches.flat()[1]?.booth.gallery[0];
   const profile = useMemo(() => snapshot ? catalogProfile(snapshot, visitor.decisions).profile : {}, [snapshot, visitor.decisions]);
-  const ranked = useMemo(() => snapshot ? recommendations(snapshot, visitor.decisions) : [], [snapshot, visitor.decisions]);
+  const ranked = useMemo(() => snapshot ? recommendations(snapshot, visitor.decisions, visitor.seed) : [], [snapshot, visitor.decisions, visitor.seed]);
   const activeDetail = detail && (snapshot?.booths.find(b => b.id === detail.id) ?? detail);
   const filtered = fandomFilter ? ranked.filter(item => item.matching.includes(fandomFilter)) : ranked;
   const mapUrl = useMemo(() => {

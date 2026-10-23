@@ -66,7 +66,12 @@ describe('goods preferences', () => {
     const request = { snapshot: s, decisions: { liked: decision('like', ['music']) }, queued: [], excluded: [], seed: 42, sequence: 0, now: 1000, revisit: false };
     const cards = generateBatch(request);
     expect(cards.map(c => c.reason)).toEqual(['interest', 'learning', 'interest', 'learning', 'random']);
-    expect(cards[0].booth.id).toBe('11');
+    let preferred = 0, baseline = 0;
+    for (let seed = 0; seed < 512; seed++) {
+      if (generateBatch({ ...request, seed })[0].booth.id === '11') preferred++;
+      if (generateBatch({ ...request, seed, decisions: { liked: decision('like') } })[0].booth.id === '11') baseline++;
+    }
+    expect(preferred).toBeGreaterThan(baseline);
     expect(new Set(cards.map(c => c.booth.id)).size).toBe(5);
     expect(generateBatch(request)).toEqual(cards);
   });

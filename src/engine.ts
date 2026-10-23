@@ -57,10 +57,10 @@ export function affinity(booth: Booth, profile: InterestProfile): number {
     : 0;
 }
 
-export function recommendations(snapshot: Snapshot, decisions: Record<string, Decision>) {
+export function recommendations(snapshot: Snapshot, decisions: Record<string, Decision>, seed?: number) {
   const { profile } = catalogProfile(snapshot, decisions);
   const { profile: goods } = buildGoodsProfile(snapshot, decisions);
-  return snapshot.booths.map(booth => ({
+  const ranked = snapshot.booths.map(booth => ({
     booth, score: goodsAdjustedAffinity(affinity(booth, profile), booth, goods),
     matchingGoods: normalizeOfferings(booth.offerings).filter(kind => (goods[kind]?.interest ?? 0) > 0)
       .sort((a, b) => goods[b].interest - goods[a].interest),
@@ -68,6 +68,17 @@ export function recommendations(snapshot: Snapshot, decisions: Record<string, De
       .sort((a, b) => profile[b].interest - profile[a].interest),
   })).filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score || a.booth.id.localeCompare(b.booth.id));
+  // The unseeded score order is also used as a baseline in coverage experiments.
+  if (seed === undefined) return ranked;
+  const result: typeof ranked = [];
+  for (let start = 0; start < ranked.length;) {
+    const cutoff = ranked[start].score * 0.8;
+    let end = start + 1;
+    while (end < ranked.length && ranked[end].score + 1e-12 >= cutoff) end++;
+    result.push(...similarMatches(ranked.slice(start, end), item => item.score, item => item.booth.id, seed, 'for-you'));
+    start = end;
+  }
+  return result;
 }
 
 // Stable pseudorandomness makes restored queues and tests reproducible.
@@ -77,6 +88,18 @@ export function noise(seed: number, key: string): number {
   hash ^= hash >>> 16; hash = Math.imul(hash, 0x7feb352d);
   hash ^= hash >>> 15; hash = Math.imul(hash, 0x846ca68b);
   return ((hash ^ (hash >>> 16)) >>> 0) / 4294967296;
+}
+
+function similarMatches<T>(ranked: T[], score: (item: T) => number, id: (item: T) => string, seed: number, context: string, clarity: (item: T) => number = () => 1): T[] {
+  if (!ranked.length) return [];
+  const best = score(ranked[0]);
+  const scale = Math.max(Math.abs(best), 1e-9);
+  // Exponential races sample without replacement, weighted toward stronger
+  // matches. ID-keyed draws keep the order independent of catalog array order.
+  const priority = (item: T) => -Math.log(Math.max(Number.EPSILON, noise(seed, `${context}:${id(item)}`)))
+    / (Math.pow(1 - (best - score(item)) / scale, 4) * clarity(item));
+  return ranked.filter(item => score(item) + 1e-12 >= best - 0.2 * scale)
+    .sort((a, b) => priority(a) - priority(b) || id(a).localeCompare(id(b)));
 }
 
 export function generateBatch(request: BatchRequest): BatchCard[] {
@@ -121,7 +144,7 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
       if (reason === 'learning') return learning(b);
       const chosenFandoms = new Set(result.flatMap(c => c.booth.fandomIds));
       const overlap = b.fandomIds.length ? b.fandomIds.reduce((sum, id) => sum + (chosenFandoms.has(id) ? weight(id) : 0), 0) / b.fandomIds.length : 0;
-      return goodsAdjustedAffinity(affinity(b, profile), b, goods) - 0.15 * overlap + jitter(b) * 0.0001;
+      return goodsAdjustedAffinity(affinity(b, profile), b, goods) - 0.15 * overlap;
     };
     pool.sort((a, b) => {
       const delta = score(b) - score(a);
@@ -129,7 +152,11 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
       if (reason === 'learning' && a.fandomIds.length !== b.fandomIds.length) return a.fandomIds.length - b.fandomIds.length;
       return jitter(b) - jitter(a) || a.id.localeCompare(b.id);
     });
-    const booth = pool[0];
+    const booth = reason === 'interest'
+      ? similarMatches(pool.filter(b => affinity(b, profile) > 0), score, b => b.id, seed, `discover:${sequence}:${slot}`)[0]
+      : reason === 'learning'
+      ? similarMatches(pool, score, b => b.id, seed, `learn:${sequence}:${slot}`, b => 0.5 + 0.5 / Math.sqrt(Math.max(1, b.fandomIds.length)))[0]
+      : pool[0];
     result.push({ booth, reason }); cover(booth);
     candidates = candidates.filter(b => b.id !== booth.id);
   }
