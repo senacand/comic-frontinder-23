@@ -1,6 +1,6 @@
 # Comic Frontinder
 
-A standalone, browser-only booth discovery app. Discover learns your fandom preferences; For You ranks all booths by those preferences; Liked booths keeps your visit list. Indonesian and English are included.
+A standalone, browser-only booth discovery app. Discover learns your fandom and goods preferences; For You ranks all booths by those preferences; Liked booths keeps your visit list. Indonesian and English are included.
 
 ## Run locally
 
@@ -63,9 +63,11 @@ The app fetches `https://cf23-config.nnt.gg/last-updated.json`, `/v1/catalog.jso
 - Every exhibitor has one latest decision. A Like contributes `1/n` positive evidence to each of its `n` recognized fandoms; a Pass contributes `0.2/n` negative evidence. Either contributes `1/n` confidence evidence. Repeated decisions replace earlier evidence.
 - Fandom interest is `(positive − negative) / (1 + positive + negative)`; confidence is `evidence / (1 + evidence)`. Unknown fandoms have zero interest and zero confidence. Booth affinity averages its fandom interests.
 - Registry `generic_tag` entries such as Original receive one quarter of their usual evidence on mixed-fandom booths. Required positive evidence is `1 + 2 × prevalence`, where prevalence is the fraction of eligible booths carrying that tag. A tag on 10% of booths needs 1.2 full likes' worth of divided evidence; one on 80% needs 2.6. Established generic scores and learning priority are reduced by catalog prevalence, retaining at least half their weight. Generic-only likes retain full evidence, and repeated decisions still replace rather than stack. Thresholds recalculate with the catalog without changing stored decisions. Legacy snapshots without fandom kinds are downloaded again; visitor decisions and saved booths are preserved.
+- Goods preferences learn separately from the catalog’s structured offerings (comics, artbooks, commissions, and other media). Likes contribute 1/n positive evidence and passes 0.1/n negative evidence across distinct offerings; confidence uses 1/n evidence. An offering’s interest is scaled by 1 − 0.9 × catalog prevalence, reducing the influence of ubiquitous merchandise. Rankings multiply fandom affinity by 1 + 0.25 × goods affinity, so goods cannot create a recommendation without a positive fandom match. Learning adds a small goods uncertainty term (0.2), accounting for queued coverage.
+- New decisions retain the offerings shown at the time. Old decisions keep their fandom evidence without inferred goods preferences. Cached snapshots without offerings support are refreshed even when the catalog version is unchanged, while queued cards and visitor data remain intact.
 - Five-card batches contain two interest picks, two learning picks, and one seeded random pick. Before positive interests exist, interest slots become learning slots. Learning picks favor uncertain fandoms while accounting for queued coverage; ties favor fewer fandoms, then seeded randomness. Interest slots penalize repetition. Two batches are kept ready; image preloading is independent.
 - Likes are excluded from Discover. Passes become eligible after 72 hours, but unseen booths always come first. Revisit explicitly reopens passed booths for one review round; a fresh pass starts its cooldown again. It does not erase interest evidence.
-- For You includes previously liked and passed exhibitors, ranks strictly by positive affinity, and has no exploration/uncertainty boosts or randomized tie-breaking. Saving there records a Like. Unsave only removes the saved entry and preserves learning.
+- For You includes previously liked and passed exhibitors, ranks by positive fandom affinity adjusted for goods preferences, and has no exploration/uncertainty boosts or randomized tie-breaking. Saving there records a Like. Unsave only removes the saved entry and preserves learning.
 - Preferences are local to a browser origin and shared by deployments on that origin. Moving to another hostname starts a new profile. Multiple open tabs do not synchronize live; use one tab for consistent discovery progress. Removed saved exhibitors retain their last saved details and are labeled unavailable.
 
-No analytics, accounts, server storage, or map integration are included.
+Booth and collection links open the external event map. No analytics, accounts, or server storage are included.

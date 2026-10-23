@@ -1,5 +1,6 @@
 import type { Booth, Snapshot } from './types';
 import type { StorageAdapter } from './storage';
+import { normalizeOfferings } from './goods';
 
 export const DATA_ORIGIN = 'https://cf23-config.nnt.gg';
 const object = (value: unknown): Record<string, unknown> => {
@@ -38,12 +39,13 @@ export function parseSnapshot(catalogRaw: unknown, fandomRaw: unknown, version: 
     booths.push({ id, name: b.name, gallery,
       spaces: Array.isArray(b.spaces) ? b.spaces.map(s => object(s).code).filter((s): s is string => typeof s === 'string' && !!s) : [],
       days: strings(b.attendanceDates),
+      offerings: normalizeOfferings(b.offerings),
       fandomIds: Array.isArray(b.fandomIds) ? [...new Set(b.fandomIds.filter((id): id is number => typeof id === 'number' && known.has(id)))] : [],
       thumbnail: webUrl(assets.thumbnail) ? assets.thumbnail : undefined,
       catalogUrl: webUrl(b.catalogUrl) ? b.catalogUrl : undefined,
     });
   }
-  return { version, booths, fandoms };
+  return { version, booths, fandoms, offeringsVersion: 1 };
 }
 
 export function validBooth(raw: unknown): raw is Booth {
@@ -53,7 +55,8 @@ export function validBooth(raw: unknown): raw is Booth {
       Array.isArray(b.gallery) && b.gallery.length > 0 && b.gallery.every(webUrl) &&
       Array.isArray(b.spaces) && b.spaces.every(s => typeof s === 'string') &&
       Array.isArray(b.days) && b.days.every(s => typeof s === 'string') &&
-      Array.isArray(b.fandomIds) && b.fandomIds.every(Number.isInteger);
+      Array.isArray(b.fandomIds) && b.fandomIds.every(Number.isInteger) &&
+      (b.offerings === undefined || (Array.isArray(b.offerings) && b.offerings.every(s => typeof s === 'string')));
   } catch { return false; }
 }
 
@@ -107,7 +110,7 @@ export class CatalogClient {
   private async download() {
     for (let attempt = 0; attempt < 3; attempt++) {
       const version = await this.version();
-      if (this.current && version <= this.current.version) return this.current;
+      if (this.current && version <= this.current.version && this.current.offeringsVersion === 1) return this.current;
       const [catalog, fandoms] = await Promise.all([
         this.json(`v1/catalog.json?v=${version}`), this.json(`v1/fandoms.json?v=${version}`),
       ]);

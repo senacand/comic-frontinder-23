@@ -76,6 +76,7 @@ export function restoreVisitor(raw: unknown): Visitor {
   try {
     for (const d of Object.values(v.decisions)) {
       if (!['like', 'pass'].includes(d.kind) || !Number.isFinite(d.at) || !Array.isArray(d.fandomIds) || !d.fandomIds.every(Number.isInteger)) return newVisitor();
+      if (d.offerings !== undefined && (!Array.isArray(d.offerings) || !d.offerings.every(s => typeof s === 'string'))) return newVisitor();
     }
     if (!Object.values(v.saved).every(validBooth) || v.batches.length > 2 ||
       v.batches.some(batch => !Array.isArray(batch) || batch.some(c => !validBooth(c.booth) || !['interest', 'learning', 'random'].includes(c.reason)))) return newVisitor();

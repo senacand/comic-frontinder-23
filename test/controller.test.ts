@@ -24,6 +24,42 @@ beforeEach(() => {
 afterEach(() => { controllers.forEach(c => c.dispose()); controllers.length = 0; vi.unstubAllGlobals(); });
 
 describe('queue and decision lifecycle', () => {
+  it('persists offerings for new decisions, replaces them on a new like, and restores them', async () => {
+    const { controller, storage } = setup(2);
+    const cached = snapshot([{ ...booth('a'), offerings: ['comic', 'goods'] }, { ...booth('b'), offerings: ['music'] }]);
+    storage.records.set('snapshot', cached);
+    await controller.start(); await controller.fill();
+    const first = controller.getSnapshot().visitor.batches[0][0].booth;
+    await controller.decide('pass');
+    expect(controller.getSnapshot().visitor.decisions[first.id].offerings).toEqual(first.offerings);
+    await controller.toggleSaved({ ...first, offerings: ['artbook'] });
+    expect(controller.getSnapshot().visitor.decisions[first.id]).toMatchObject({ kind: 'like', offerings: ['artbook'] });
+    await controller.toggleSaved(first);
+    expect(controller.getSnapshot().visitor.decisions[first.id].offerings).toEqual(['artbook']);
+    const restored = new AppController(storage, new LocalGenerator(), offline); controllers.push(restored);
+    await restored.start();
+    expect(restored.getSnapshot().visitor.decisions[first.id].offerings).toEqual(['artbook']);
+  });
+  it('applies a same-version offerings upgrade without changing queued cards or past evidence', async () => {
+    const storage = new MemoryStorage();
+    const cached = snapshot([booth('a')]); delete cached.offeringsVersion;
+    storage.records.set('snapshot', cached);
+    const v = visitor();
+    v.saved = { a: booth('a') };
+    v.decisions = { a: { kind: 'like', at: 1, fandomIds: [1] } };
+    v.batches = [[{ booth: booth('queued'), reason: 'learning' }]];
+    storage.records.set('visitor', v);
+    const raw = rawCatalog();
+    const replies = [{ creator_data_version: 1 }, { ...raw, exhibitors: [{ ...raw.exhibitors[0], offerings: ['comic'] }] }, rawFandoms, { creator_data_version: 1 }];
+    const fetcher = vi.fn(async () => new Response(JSON.stringify(replies.shift()))) as unknown as typeof fetch;
+    const controller = new AppController(storage, new LocalGenerator(), fetcher); controllers.push(controller);
+    await controller.start(); await controller.fill();
+    const state = controller.getSnapshot();
+    expect(state.snapshot?.booths[0].offerings).toEqual(['comic']);
+    expect(state.visitor.saved.a.offerings).toEqual(['comic']);
+    expect(state.visitor.decisions).toEqual(v.decisions);
+    expect(state.visitor.batches[0][0].booth).toEqual(booth('queued'));
+  });
   it('starts with two batches, persists before advancing and replenishes after five decisions', async () => {
     const { controller, storage } = setup(); await controller.start(); await controller.fill();
     expect(controller.getSnapshot().visitor.batches.map(b => b.length)).toEqual([5, 5]);

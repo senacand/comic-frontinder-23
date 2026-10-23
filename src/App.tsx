@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AppController } from './controller';
-import { copy, type Copy } from './copy';
+import { copy, offeringName, type Copy } from './copy';
 import { catalogProfile, recommendations } from './engine';
 import { Gallery, RemoteImage } from './Gallery';
 import { Icon } from './icons';
 import { creatorListMapUrl, creatorMapUrl } from './map-link';
 import { useDecisionMotion } from './explore-motion';
 import { Reaction } from './Reaction';
+import { normalizeOfferings } from './goods';
 import type { Booth, InterestProfile, Language, Page, Snapshot } from './types';
 
 const pageFromHash = (): Page => {
@@ -25,6 +26,12 @@ function Fandoms({ booth, snapshot, profile, t, matching }: { booth: Booth; snap
       {ids.length > 5 && <button className="fandom-tag tag-more" aria-expanded={expanded} aria-label={expanded ? t.less : t.moreFandoms} onClick={() => setExpanded(!expanded)}>{expanded ? '−' : `+${ids.length - 5}`}</button>}
     </div>
   </div>;
+}
+
+function Offerings({ booth, t, language, matching }: { booth: Booth; t: Copy; language: Language; matching?: string[] }) {
+  const kinds = matching ?? normalizeOfferings(booth.offerings);
+  if (!kinds.length) return null;
+  return <div className="offering-section"><span className="mini-label">{matching ? t.matchingOfferings : t.offerings}</span><p>{kinds.map(kind => offeringName(kind, language)).join(' · ')}</p></div>;
 }
 
 function Location({ booth, t, language }: { booth: Booth; t: Copy; language: Language }) {
@@ -48,7 +55,7 @@ function Detail({ booth, snapshot, profile, t, language, saved, toggle, close }:
   return <dialog className="detail-dialog" ref={dialog} onCancel={close} onClose={close} aria-label={booth.name} onClick={e => { if (e.target === dialog.current) close(); }}>
     <div className="detail-toolbar"><span className="mini-label">Comic Frontinder</span><button className="icon-button" onClick={close} aria-label={t.close}><Icon name="close"/></button></div>
     <Gallery booth={booth} t={t} fullscreen/>
-    <div className="detail-body"><h2>{booth.name}</h2><Location booth={booth} t={t} language={language}/><Fandoms booth={booth} snapshot={snapshot} profile={profile} t={t}/>
+    <div className="detail-body"><h2>{booth.name}</h2><Location booth={booth} t={t} language={language}/><Fandoms booth={booth} snapshot={snapshot} profile={profile} t={t}/><Offerings booth={booth} t={t} language={language}/>
       <div className="detail-actions"><button className={`primary-button ${saved ? 'is-saved' : ''}`} onClick={toggle}><Icon name={saved ? 'check' : 'bookmark'}/>{saved ? t.unsave : t.save}</button>{booth.catalogUrl && <a href={booth.catalogUrl} target="_blank" rel="noreferrer" className="source-link">{t.source}<Icon name="external" size={15}/></a>}</div>
     </div>
   </dialog>;
@@ -112,7 +119,7 @@ export default function App({ controller }: { controller: AppController }) {
             {loading ? <div className="booth-card"><Empty icon="heart" title={t.loading} body={t.loadingBody}><span className="loading-dots" aria-label={t.loading}><i/><i/><i/></span></Empty></div>
               : error ? <div className="booth-card"><Empty icon="image" title={t.failure} body={t.failureBody}><button className="primary-button" onClick={() => void controller.refresh()}>{t.retry}</button><details className="error-details"><summary>{t.errorDetails}</summary><pre>{error}</pre></details></Empty></div>
               : snapshot && displayed ? <>
-                <article className={`booth-card explore-card ${reaction ? `exit-${reaction}` : 'card-enter'}`} key={displayed.id}><Gallery booth={displayed} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{displayed.name}</h2>{displayed.catalogUrl && <a className="icon-button" href={displayed.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}</div><Location booth={displayed} t={t} language={language}/><Fandoms booth={displayed} snapshot={snapshot} profile={profile} t={t}/></div>{reaction && <Reaction kind={reaction}/>}</article>
+                <article className={`booth-card explore-card ${reaction ? `exit-${reaction}` : 'card-enter'}`} key={displayed.id}><Gallery booth={displayed} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{displayed.name}</h2>{displayed.catalogUrl && <a className="icon-button" href={displayed.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}</div><Location booth={displayed} t={t} language={language}/><Fandoms booth={displayed} snapshot={snapshot} profile={profile} t={t}/><Offerings booth={displayed} t={t} language={language}/></div>{reaction && <Reaction kind={reaction}/>}</article>
                 <div className="decision-controls"><button className="pass-button" disabled={acting} onClick={() => void decide('pass')}><Icon name="close" size={23}/>{t.pass}<kbd>P</kbd></button><button className="like-button" disabled={acting} onClick={() => void decide('like')}><Icon name="heart" size={23}/>{t.like}<kbd>L</kbd></button></div>
               </> : snapshot && generating ? <div className="booth-card card-skeleton" aria-busy="true"><div/><span/><span/></div>
               : snapshot && <div className="booth-card"><Empty icon={snapshot.booths.length ? 'check' : 'image'} title={generationError ? t.feedFailure : snapshot.booths.length ? t.exhausted : t.noCatalog} body={generationError ? t.failureBody : snapshot.booths.length ? t.exhaustedBody : t.noCatalogBody}>
@@ -126,7 +133,7 @@ export default function App({ controller }: { controller: AppController }) {
         {!snapshot ? <Empty title={loading ? t.loading : t.failure} body={loading ? t.loadingBody : t.failureBody}>{!loading && <button className="primary-button" onClick={() => void controller.refresh()}>{t.retry}</button>}</Empty>
           : page === 'recommendations' ? <>
             {ranked.length > 0 && <div className="filter-row"><button className={!fandomFilter ? 'active' : ''} onClick={() => { setFandomFilter(undefined); setLimit(20); }}>{t.all}<span>{ranked.length}</span></button>{recommendedFandoms.map(f => <button key={f.id} className={fandomFilter === f.id ? 'active' : ''} onClick={() => { setFandomFilter(f.id); setLimit(20); }}>{f.name}</button>)}</div>}
-            {!ranked.length ? <Empty title={t.emptyRec} body={t.emptyRecBody}><a href="#/discover" className="primary-button">{t.start}<Icon name="arrow" size={18}/></a></Empty> : <><div className="results-grid">{filtered.slice(0, limit).map(({ booth, matching }, index) => <ResultCard key={booth.id} booth={booth} t={t} language={language} snapshot={snapshot} profile={profile} matching={matching} rank={index + 1} saved={!!visitor.saved[booth.id]} open={() => setDetail(booth)} toggle={() => void controller.toggleSaved(booth)}/>)}</div>{filtered.length > limit && <button className="show-more" onClick={() => setLimit(limit + 20)}>{t.more}<Icon name="arrow" size={18}/></button>}</>}
+            {!ranked.length ? <Empty title={t.emptyRec} body={t.emptyRecBody}><a href="#/discover" className="primary-button">{t.start}<Icon name="arrow" size={18}/></a></Empty> : <><div className="results-grid">{filtered.slice(0, limit).map(({ booth, matching, matchingGoods }, index) => <ResultCard key={booth.id} booth={booth} t={t} language={language} snapshot={snapshot} profile={profile} matching={matching} matchingGoods={matchingGoods} rank={index + 1} saved={!!visitor.saved[booth.id]} open={() => setDetail(booth)} toggle={() => void controller.toggleSaved(booth)}/>)}</div>{filtered.length > limit && <button className="show-more" onClick={() => setLimit(limit + 20)}>{t.more}<Icon name="arrow" size={18}/></button>}</>}
           </> : !Object.keys(visitor.saved).length ? <Empty icon="bookmark" title={t.emptyTitle} body={t.emptyBody}><a href="#/discover" className="primary-button">{t.start}<Icon name="arrow" size={18}/></a></Empty>
           : <div className="results-grid">{Object.values(visitor.saved).map(booth => <ResultCard key={booth.id} booth={booth} t={t} language={language} snapshot={snapshot} profile={profile} saved open={() => setDetail(booth)} toggle={() => void controller.toggleSaved(booth)} unavailable={!snapshot.booths.some(b => b.id === booth.id)}/>)}</div>}
       </section>}
@@ -135,6 +142,6 @@ export default function App({ controller }: { controller: AppController }) {
   </div>;
 }
 
-function ResultCard({ booth, t, language, snapshot, profile, matching, saved, rank, open, toggle, unavailable }: { booth: Booth; t: Copy; language: Language; snapshot: Snapshot; profile: InterestProfile; matching?: number[]; saved: boolean; rank?: number; open: () => void; toggle: () => void; unavailable?: boolean }) {
-  return <article className="result-card"><div className="result-preview"><RemoteImage src={booth.gallery[0]} alt={booth.name} t={t}/><button className="preview-open" onClick={open} aria-label={`${t.catalog}: ${booth.name}`}/>{rank && <span className="rank-badge">#{String(rank).padStart(2, '0')}</span>}</div><div className="result-body"><div className="result-title"><button onClick={open}>{booth.name}</button><button className={`save-button ${saved ? 'saved' : ''}`} aria-label={saved ? t.unsave : t.save} aria-pressed={saved} onClick={toggle}><Icon name={saved ? 'check' : 'bookmark'} size={19}/></button></div><Location booth={booth} t={t} language={language}/>{unavailable ? <p className="unavailable" title={t.unavailableBody}>{t.unavailable}</p> : <Fandoms booth={booth} snapshot={snapshot} profile={profile} t={t} matching={matching}/>}</div></article>;
+function ResultCard({ booth, t, language, snapshot, profile, matching, matchingGoods, saved, rank, open, toggle, unavailable }: { booth: Booth; t: Copy; language: Language; snapshot: Snapshot; profile: InterestProfile; matching?: number[]; matchingGoods?: string[]; saved: boolean; rank?: number; open: () => void; toggle: () => void; unavailable?: boolean }) {
+  return <article className="result-card"><div className="result-preview"><RemoteImage src={booth.gallery[0]} alt={booth.name} t={t}/><button className="preview-open" onClick={open} aria-label={`${t.catalog}: ${booth.name}`}/>{rank && <span className="rank-badge">#{String(rank).padStart(2, '0')}</span>}</div><div className="result-body"><div className="result-title"><button onClick={open}>{booth.name}</button><button className={`save-button ${saved ? 'saved' : ''}`} aria-label={saved ? t.unsave : t.save} aria-pressed={saved} onClick={toggle}><Icon name={saved ? 'check' : 'bookmark'} size={19}/></button></div><Location booth={booth} t={t} language={language}/>{unavailable ? <p className="unavailable" title={t.unavailableBody}>{t.unavailable}</p> : <><Fandoms booth={booth} snapshot={snapshot} profile={profile} t={t} matching={matching}/><Offerings booth={booth} t={t} language={language} matching={matchingGoods}/></>}</div></article>;
 }

@@ -10,10 +10,12 @@ export interface Booth {
   thumbnail?: string;
   catalogUrl?: string;
   fandomIds: number[];
+  offerings?: string[];
 }
-export interface Snapshot { version: number; booths: Booth[]; fandoms: Fandom[] }
+export interface Snapshot { version: number; booths: Booth[]; fandoms: Fandom[]; offeringsVersion?: 1 }
 export interface Decision {
   kind: 'like' | 'pass'; at: number; fandomIds: number[];
+  offerings?: string[];
 }
 export interface FandomInterest {
   positive: number; negative: number; evidence: number;

@@ -97,7 +97,7 @@ export class AppController {
     try {
       const snapshot = await this.catalog.refresh();
       if (this.disposed) return;
-      if (this.state.snapshot?.version !== snapshot.version) this.applySnapshot(snapshot);
+      if (this.state.snapshot !== snapshot) this.applySnapshot(snapshot);
       this.update({ loading: false, error: undefined });
       void this.fill();
     } catch (error) {
@@ -148,7 +148,7 @@ export class AppController {
       const visitor = this.state.visitor;
       // Keep the card visible until the decision has been persisted.
       await this.save({ ...visitor,
-        decisions: { ...visitor.decisions, [card.booth.id]: { kind, at: Date.now(), fandomIds: card.booth.fandomIds } },
+        decisions: { ...visitor.decisions, [card.booth.id]: { kind, at: Date.now(), fandomIds: card.booth.fandomIds, offerings: card.booth.offerings } },
         revisitIds: visitor.revisitIds?.filter(id => id !== card.booth.id),
         saved: kind === 'like' ? { ...visitor.saved, [card.booth.id]: card.booth } : visitor.saved });
       const latest = this.state.visitor;
@@ -165,7 +165,7 @@ export class AppController {
     } else {
       this.generation++;
       await this.save({ ...visitor, saved: { ...visitor.saved, [booth.id]: booth },
-        decisions: { ...visitor.decisions, [booth.id]: { kind: 'like', at: Date.now(), fandomIds: booth.fandomIds } },
+        decisions: { ...visitor.decisions, [booth.id]: { kind: 'like', at: Date.now(), fandomIds: booth.fandomIds, offerings: booth.offerings } },
         batches: visitor.batches.map(batch => batch.filter(c => c.booth.id !== booth.id)).filter(b => b.length) });
       void this.fill();
     }

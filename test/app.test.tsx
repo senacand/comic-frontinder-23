@@ -35,6 +35,21 @@ async function navigate(hash: string) {
 }
 
 describe('app interactions', () => {
+  it('shows offering types and explains goods matches without learning from opening details', async () => {
+    const featured = { ...first, offerings: ['comic', 'handmade_crafts'] };
+    const v = records.get('visitor') as Visitor;
+    v.batches = [[{ booth: featured, reason: 'learning' }]];
+    v.decisions = { liked: { kind: 'like', at: 1, fandomIds: [1], offerings: ['comic'] } };
+    records.set('snapshot', snapshot([featured]));
+    await mount();
+    expect(screen.getByText('Komik · Kerajinan tangan')).toBeTruthy();
+    await navigate('#/recommendations');
+    expect(screen.getByText('Jenis karya yang cocok')).toBeTruthy();
+    expect(screen.getByText('Komik')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Katalog: Circle a' }));
+    expect(screen.getByRole('dialog').textContent).toContain('Komik · Kerajinan tangan');
+    expect(controller.getSnapshot().visitor.decisions).toEqual(v.decisions);
+  });
   it('links each booth to its map selection across discovery, collections, and details', async () => {
     const featured = booth('1000004');
     const v = records.get('visitor') as Visitor;

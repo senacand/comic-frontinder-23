@@ -1,4 +1,5 @@
 import type { BatchCard, BatchRequest, Booth, Decision, InterestProfile, Snapshot } from './types';
+import { buildGoodsProfile, goodsAdjustedAffinity, normalizeOfferings } from './goods';
 
 export const COOLDOWN = 72 * 60 * 60 * 1000;
 export const unique = (ids: number[]) => [...new Set(ids)];
@@ -58,8 +59,11 @@ export function affinity(booth: Booth, profile: InterestProfile): number {
 
 export function recommendations(snapshot: Snapshot, decisions: Record<string, Decision>) {
   const { profile } = catalogProfile(snapshot, decisions);
+  const { profile: goods } = buildGoodsProfile(snapshot, decisions);
   return snapshot.booths.map(booth => ({
-    booth, score: affinity(booth, profile),
+    booth, score: goodsAdjustedAffinity(affinity(booth, profile), booth, goods),
+    matchingGoods: normalizeOfferings(booth.offerings).filter(kind => (goods[kind]?.interest ?? 0) > 0)
+      .sort((a, b) => goods[b].interest - goods[a].interest),
     matching: booth.fandomIds.filter(id => (profile[id]?.interest ?? 0) > 0)
       .sort((a, b) => profile[b].interest - profile[a].interest),
   })).filter(item => item.score > 0)
@@ -78,6 +82,7 @@ export function noise(seed: number, key: string): number {
 export function generateBatch(request: BatchRequest): BatchCard[] {
   const { snapshot, decisions, now, revisit, seed, sequence } = request;
   const { profile, weight } = catalogProfile(snapshot, decisions);
+  const { profile: goods, weight: goodsWeight } = buildGoodsProfile(snapshot, decisions);
   const excluded = new Set(request.excluded);
   let candidates = snapshot.booths.filter(booth => {
     if (excluded.has(booth.id)) return false;
@@ -85,7 +90,11 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
     return !decision || (decision.kind === 'pass' && ((revisit && (!request.revisitIds || request.revisitIds.includes(booth.id))) || now - decision.at >= COOLDOWN));
   });
   const coverage = new Map<number, number>();
-  const cover = (booth: Booth) => booth.fandomIds.forEach(id => coverage.set(id, (coverage.get(id) ?? 0) + 1));
+  const goodsCoverage = new Map<string, number>();
+  const cover = (booth: Booth) => {
+    booth.fandomIds.forEach(id => coverage.set(id, (coverage.get(id) ?? 0) + 1));
+    normalizeOfferings(booth.offerings).forEach(kind => goodsCoverage.set(kind, (goodsCoverage.get(kind) ?? 0) + 1));
+  };
   request.queued.forEach(cover);
   const hasPositive = Object.values(profile).some(f => f.interest > 0);
   const slots: BatchCard['reason'][] = hasPositive
@@ -98,9 +107,13 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
     const pool = unseen.length ? unseen : candidates;
     let reason = slots[slot];
     const jitter = (b: Booth) => noise(seed, `${sequence}:${slot}:${b.id}`);
-    const learning = (b: Booth) => b.fandomIds.length
-      ? b.fandomIds.reduce((sum, id) => sum + weight(id) * (1 - (profile[id]?.confidence ?? 0)) / (1 + (coverage.get(id) ?? 0)), 0) / b.fandomIds.length
-      : 0;
+    const learning = (b: Booth) => {
+      const fandom = b.fandomIds.length
+        ? b.fandomIds.reduce((sum, id) => sum + weight(id) * (1 - (profile[id]?.confidence ?? 0)) / (1 + (coverage.get(id) ?? 0)), 0) / b.fandomIds.length : 0;
+      const kinds = normalizeOfferings(b.offerings);
+      const offering = kinds.length ? kinds.reduce((sum, kind) => sum + goodsWeight(kind) * (1 - (goods[kind]?.confidence ?? 0)) / (1 + (goodsCoverage.get(kind) ?? 0)), 0) / kinds.length : 0;
+      return fandom + 0.2 * offering;
+    };
     if (reason === 'interest' && !pool.some(b => affinity(b, profile) > 0)) reason = 'learning';
     if (reason === 'learning' && !pool.some(b => learning(b) > 0)) reason = 'random';
     const score = (b: Booth) => {
@@ -108,7 +121,7 @@ export function generateBatch(request: BatchRequest): BatchCard[] {
       if (reason === 'learning') return learning(b);
       const chosenFandoms = new Set(result.flatMap(c => c.booth.fandomIds));
       const overlap = b.fandomIds.length ? b.fandomIds.reduce((sum, id) => sum + (chosenFandoms.has(id) ? weight(id) : 0), 0) / b.fandomIds.length : 0;
-      return affinity(b, profile) - 0.15 * overlap + jitter(b) * 0.0001;
+      return goodsAdjustedAffinity(affinity(b, profile), b, goods) - 0.15 * overlap + jitter(b) * 0.0001;
     };
     pool.sort((a, b) => {
       const delta = score(b) - score(a);

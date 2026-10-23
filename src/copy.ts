@@ -2,6 +2,7 @@ export const copy = {
   id: {
     discover: 'Jelajahi', recommendations: 'Untuk kamu', saved: 'Daftar Suka',
     openInMap: 'Buka di peta',
+    offerings: 'Jenis karya', matchingOfferings: 'Jenis karya yang cocok',
     pass: 'Lewati', like: 'Suka', catalog: 'Katalog',
     catalogPages: 'Halaman katalog',
     match: 'Fandom yang cocok', save: 'Sukai booth', unsave: 'Hapus dari daftar suka',
@@ -22,6 +23,7 @@ export const copy = {
   en: {
     discover: 'Discover', recommendations: 'For you', saved: 'Liked booths',
     openInMap: 'Open in Map',
+    offerings: 'Works & goods', matchingOfferings: 'Matching works & goods',
     pass: 'Pass', like: 'Like', catalog: 'Catalog',
     catalogPages: 'Catalog pages',
     match: 'Matching fandoms', save: 'Like booth', unsave: 'Remove from likes',
@@ -41,3 +43,12 @@ export const copy = {
   },
 };
 export type Copy = { [K in keyof typeof copy.en]: string };
+
+const offeringNames: Record<string, [string, string]> = {
+  artbook: ['Artbook', 'Artbooks'], goods: ['Merchandise', 'Merchandise'],
+  handmade_crafts: ['Kerajinan tangan', 'Handmade crafts'], commission: ['Komisi', 'Commissions'],
+  comic: ['Komik', 'Comics'], game: ['Game', 'Games'], magazine: ['Majalah', 'Magazines'],
+  music: ['Musik', 'Music'], novel: ['Novel', 'Novels'],
+  photobook_general: ['Photobook', 'Photobooks'], photobook_cosplay: ['Photobook cosplay', 'Cosplay photobooks'],
+};
+export const offeringName = (kind: string, language: 'id' | 'en') => offeringNames[kind]?.[language === 'id' ? 0 : 1] ?? kind.replaceAll('_', ' ');

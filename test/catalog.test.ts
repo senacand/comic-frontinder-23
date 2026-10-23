@@ -11,6 +11,25 @@ function responses(...values: unknown[]) {
 const manifest = (version: number) => ({ creator_data_version: version, current_version: 999 });
 
 describe('catalog validation and atomic updates', () => {
+  it('parses and normalizes offerings from the catalog', () => {
+    const raw = rawCatalog();
+    const b = { ...raw.exhibitors[0], offerings: [' Comic ', 'comic', 'Handmade Crafts', '', 123] };
+    const result = parseSnapshot({ ...raw, exhibitors: [b] }, rawFandoms, 1);
+    expect(result.booths[0].offerings).toEqual(['comic', 'handmade_crafts']);
+    expect(result.offeringsVersion).toBe(1);
+  });
+  it('serves a legacy cache immediately and upgrades offerings at the same catalog version', async () => {
+    const storage = new MemoryStorage();
+    const old = snapshot(); delete old.offeringsVersion;
+    storage.records.set('snapshot', old);
+    storage.records.set('visitor', { decisions: { keep: true } });
+    const raw = rawCatalog();
+    const updated = { ...raw, exhibitors: [{ ...raw.exhibitors[0], offerings: ['comic'] }] };
+    const client = new CatalogClient(storage, responses(manifest(1), updated, rawFandoms, manifest(1)));
+    expect(await client.cached()).toEqual(old);
+    expect((await client.refresh()).booths[0].offerings).toEqual(['comic']);
+    expect(storage.records.get('visitor')).toEqual({ decisions: { keep: true } });
+  });
   it('binds native browser fetch to its global receiver', async () => {
     const reply = responses(manifest(2), rawCatalog(), rawFandoms, manifest(2));
     const browserFetch = vi.fn(function (this: unknown, ...args: Parameters<typeof fetch>) {

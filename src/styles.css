@@ -75,6 +75,8 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 .booth-map-link { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; color: #775b8f; font-size: 11px; font-weight: 600; }
 .booth-map-link:hover { text-decoration: underline; }
 .fandom-section { margin-top: 24px; }
+.offering-section { margin-top: 12px; }
+.offering-section p { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 4px; }
 .mini-label { color: var(--muted); font-size: 10px; font-weight: 600; }
 .fandom-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .fandom-tag { max-width: 100%; padding: 6px 9px; border-radius: 6px; background: #eee6f6; color: #74558c; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
