@@ -34,7 +34,7 @@ function Offerings({ booth, t, language, matching }: { booth: Booth; t: Copy; la
   return <div className="offering-section"><span className="mini-label">{matching ? t.matchingOfferings : t.offerings}</span><p>{kinds.map(kind => offeringName(kind, language)).join(' · ')}</p></div>;
 }
 
-function Location({ booth, t, language }: { booth: Booth; t: Copy; language: Language }) {
+function Location({ booth, t, language, showMap = true }: { booth: Booth; t: Copy; language: Language; showMap?: boolean }) {
   const mapUrl = creatorMapUrl(booth.id);
   const dates = booth.days.map(day => {
     if (day === '2026-10-31') return t.day1;
@@ -42,7 +42,7 @@ function Location({ booth, t, language }: { booth: Booth; t: Copy; language: Lan
     const date = new Date(`${day}T12:00:00Z`);
     return Number.isNaN(date.getTime()) ? day : new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
   });
-  return <div className="location-row"><span className="booth-location"><Icon name="pin" size={16}/>{booth.spaces.join(' / ') || '—'}</span>{dates.length > 0 && <span className="attendance">{dates.join(' · ')}</span>}{mapUrl && <a className="booth-map-link" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`${t.openInMap}: ${booth.name}`}>{t.openInMap}<Icon name="external" size={13}/></a>}</div>;
+  return <div className="location-row"><span className="booth-location"><Icon name="pin" size={16}/>{booth.spaces.join(' / ') || '—'}</span>{dates.length > 0 && <span className="attendance">{dates.join(' · ')}</span>}{showMap && mapUrl && <a className="booth-map-link" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`${t.openInMap}: ${booth.name}`}>{t.openInMap}<Icon name="external" size={13}/></a>}</div>;
 }
 
 function Empty({ icon = 'sparkle', title, body, children }: { icon?: string; title: string; body: string; children?: React.ReactNode }) {
@@ -119,7 +119,7 @@ export default function App({ controller }: { controller: AppController }) {
             {loading ? <div className="booth-card"><Empty icon="heart" title={t.loading} body={t.loadingBody}><span className="loading-dots" aria-label={t.loading}><i/><i/><i/></span></Empty></div>
               : error ? <div className="booth-card"><Empty icon="image" title={t.failure} body={t.failureBody}><button className="primary-button" onClick={() => void controller.refresh()}>{t.retry}</button><details className="error-details"><summary>{t.errorDetails}</summary><pre>{error}</pre></details></Empty></div>
               : snapshot && displayed ? <>
-                <article className={`booth-card explore-card ${reaction ? `exit-${reaction}` : 'card-enter'}`} key={displayed.id}><Gallery booth={displayed} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{displayed.name}</h2>{displayed.catalogUrl && <a className="icon-button" href={displayed.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}</div><Location booth={displayed} t={t} language={language}/><Fandoms booth={displayed} snapshot={snapshot} profile={profile} t={t}/><Offerings booth={displayed} t={t} language={language}/></div>{reaction && <Reaction kind={reaction}/>}</article>
+                <article className={`booth-card explore-card ${reaction ? `exit-${reaction}` : 'card-enter'}`} key={displayed.id}><Gallery booth={displayed} t={t}/><div className="booth-information"><div className="booth-title-row"><h2>{displayed.name}</h2><div className="booth-links">{displayed.catalogUrl && <a className="icon-button" href={displayed.catalogUrl} target="_blank" rel="noreferrer" aria-label={t.source}><Icon name="external" size={18}/></a>}{creatorMapUrl(displayed.id) && <a className="icon-button booth-map-link" href={creatorMapUrl(displayed.id)} target="_blank" rel="noopener noreferrer" aria-label={`${t.openInMap}: ${displayed.name}`}><Icon name="pin" size={18}/></a>}</div></div><Location booth={displayed} t={t} language={language} showMap={false}/><Fandoms booth={displayed} snapshot={snapshot} profile={profile} t={t}/><Offerings booth={displayed} t={t} language={language}/></div>{reaction && <Reaction kind={reaction}/>}</article>
                 <div className="decision-controls"><button className="pass-button" disabled={acting} onClick={() => void decide('pass')}><Icon name="close" size={23}/>{t.pass}<kbd>P</kbd></button><button className="like-button" disabled={acting} onClick={() => void decide('like')}><Icon name="heart" size={23}/>{t.like}<kbd>L</kbd></button></div>
               </> : snapshot && generating ? <div className="booth-card card-skeleton" aria-busy="true"><div/><span/><span/></div>
               : snapshot && <div className="booth-card"><Empty icon={snapshot.booths.length ? 'check' : 'image'} title={generationError ? t.feedFailure : snapshot.booths.length ? t.exhausted : t.noCatalog} body={generationError ? t.failureBody : snapshot.booths.length ? t.exhaustedBody : t.noCatalogBody}>
