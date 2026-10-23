@@ -163,6 +163,7 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 .pinch-content img { user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
 .gallery > .gallery-track .pinch-surface { cursor: zoom-in; }
 .image-zoom-control { position: absolute; bottom: 12px; right: 16px; background: #ffffff20; color: white; z-index: 1; }
+.gallery > .gallery-track .image-zoom-control { top: 50px; bottom: auto; right: 12px; }
 .zoom-navigation { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
 .booth-links { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
 .booth-links .booth-map-link { display: grid; place-items: center; gap: 0; padding: 0; border: 0; border-radius: 9px; }

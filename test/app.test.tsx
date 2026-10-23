@@ -35,19 +35,24 @@ async function navigate(hash: string) {
 }
 
 describe('app interactions', () => {
-  it('shows offering types and explains goods matches without learning from opening details', async () => {
-    const featured = { ...first, offerings: ['comic', 'handmade_crafts'] };
+  it('shows all offerings sorted by interest across views without learning from opening details', async () => {
+    const featured = { ...first, offerings: ['novel', 'handmade_crafts', 'comic'] };
     const v = records.get('visitor') as Visitor;
     v.batches = [[{ booth: featured, reason: 'learning' }]];
-    v.decisions = { liked: { kind: 'like', at: 1, fandomIds: [1], offerings: ['comic'] } };
+    v.decisions = { liked: { kind: 'like', at: 1, fandomIds: [1], offerings: ['comic'] }, passed: { kind: 'pass', at: 1, fandomIds: [], offerings: ['novel'] } };
+    v.saved = { a: featured };
     records.set('snapshot', snapshot([featured]));
     await mount();
-    expect(screen.getByText('Komik · Kerajinan tangan')).toBeTruthy();
+    expect(screen.getByText('Komik · Kerajinan tangan · Novel')).toBeTruthy();
     await navigate('#/recommendations');
-    expect(screen.getByText('Jenis karya yang cocok')).toBeTruthy();
-    expect(screen.getByText('Komik')).toBeTruthy();
+    expect(screen.getByText('Jenis karya')).toBeTruthy();
+    expect(screen.queryByText(/yang cocok/)).toBeNull();
+    expect(screen.getByText('Komik · Kerajinan tangan · Novel')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Katalog: Circle a' }));
-    expect(screen.getByRole('dialog').textContent).toContain('Komik · Kerajinan tangan');
+    expect(screen.getByRole('dialog').textContent).toContain('Komik · Kerajinan tangan · Novel');
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup' }));
+    await navigate('#/saved');
+    expect(screen.getByText('Komik · Kerajinan tangan · Novel')).toBeTruthy();
     expect(controller.getSnapshot().visitor.decisions).toEqual(v.decisions);
   });
   it('links each booth to its map selection across discovery, collections, and details', async () => {
@@ -73,7 +78,7 @@ describe('app interactions', () => {
     }
     expect(controller.getSnapshot().visitor.decisions).toEqual(v.decisions);
   });
-  it('shows the strongest fandom interests before the tag cutoff across views', async () => {
+  it('shows all fandoms sorted by interest across views', async () => {
     const featured = booth('a', [1, 2, 3, 4, 5, 6, 7]);
     const v = records.get('visitor') as Visitor;
     v.batches = [[{ booth: featured, reason: 'learning' }]];
@@ -83,13 +88,8 @@ describe('app interactions', () => {
     };
     v.saved = { a: featured };
     records.set('snapshot', snapshot([featured]));
-    const tags = () => [...document.querySelectorAll('.fandom-tag:not(.tag-more)')]
-      .filter(tag => !tag.classList.contains('tag-overflow') || tag.parentElement?.classList.contains('expanded'))
-      .map(tag => tag.textContent);
+    const tags = () => [...document.querySelectorAll('.fandom-tag')].map(tag => tag.textContent);
     await mount();
-    expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5']);
-    expect(document.querySelectorAll('.tag-overflow')).toHaveLength(2);
-    fireEvent.click(document.querySelector('.tag-more')!);
     expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5', 'Fandom 6', 'Fandom 1']);
     expect(featured.fandomIds).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await navigate('#/saved');
@@ -98,7 +98,8 @@ describe('app interactions', () => {
     expect([...screen.getByRole('dialog').querySelectorAll('.fandom-tag')][0].textContent).toBe('Fandom 7');
     fireEvent.click(screen.getByRole('button', { name: 'Tutup' }));
     await navigate('#/recommendations');
-    expect(tags()).toEqual(['Fandom 7']);
+    expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5', 'Fandom 6', 'Fandom 1']);
+    expect(screen.queryByText(/yang cocok/)).toBeNull();
   });
   it('starts in Indonesian, changes language, persists it, and supports keyboard likes', async () => {
     await mount();

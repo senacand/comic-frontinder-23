@@ -44,7 +44,7 @@ it('opens on a single image tap and scrolls separate zoom pages without swapping
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
-it('returns Discover to normal after a pinch and suppresses the resulting click', () => {
+it('keeps Discover zoom after a pinch, suppresses accidental opening, and offers reset', () => {
   render(<Gallery booth={catalog} t={copy.en}/>);
   const surface = document.querySelector('.pinch-surface')!; size(surface);
   const content = surface.querySelector<HTMLElement>('.pinch-content')!;
@@ -54,9 +54,12 @@ it('returns Discover to normal after a pinch and suppresses the resulting click'
   expect(move.defaultPrevented).toBe(true);
   expect(content.style.transform).toContain('scale(2)');
   fireEvent.touchEnd(surface, { touches: [] });
-  expect(content.style.transform).toContain('scale(1)');
+  expect(content.style.transform).toContain('scale(2)');
   fireEvent.click(surface);
   expect(screen.queryByRole('dialog')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Reset image zoom' }));
+  expect(content.style.transform).toContain('scale(1)');
+  expect(screen.queryByRole('button', { name: 'Reset image zoom' })).toBeNull();
 });
 
 it('retains the selected zoom page when the viewport width changes', () => {

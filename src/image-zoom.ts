@@ -4,7 +4,7 @@ interface View { scale: number; x: number; y: number }
 const normal: View = { scale: 1, x: 0, y: 0 };
 const distance = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
 
-export function useImageZoom(transient: boolean) {
+export function useImageZoom() {
   const surface = useRef<HTMLDivElement>(null);
   const current = useRef<View>(normal);
   const [view, setView] = useState(normal);
@@ -64,7 +64,6 @@ export function useImageZoom(transient: boolean) {
       if (moved || interacting) suppressUntil.current = Date.now() + 500;
       if (event.touches.length < 2) {
         pinch = undefined;
-        if (transient) reset();
         if (event.touches.length === 1) last = { x: event.touches[0].clientX, y: event.touches[0].clientY };
       }
       if (!event.touches.length) interacting = false;
@@ -80,7 +79,7 @@ export function useImageZoom(transient: boolean) {
       el.removeEventListener('touchstart', onStart); el.removeEventListener('touchmove', onMove);
       el.removeEventListener('touchend', onEnd); el.removeEventListener('touchcancel', onCancel);
     };
-  }, [transient, update, reset]);
+  }, [update, reset]);
 
   return { surface, view, reset, toggle, suppressClick: () => Date.now() < suppressUntil.current,
     style: { transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` } };

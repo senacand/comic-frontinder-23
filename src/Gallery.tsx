@@ -27,14 +27,14 @@ function ImageRequest({ src, alt, t, ...props }: RemoteImageProps) {
   </div>;
 }
 
-function CatalogImage({ url, alt, t, eager, transient, active = true, open }: { url: string; alt: string; t: Copy; eager: boolean; transient: boolean; active?: boolean; open?: () => void }) {
-  const { surface, view, style, reset, toggle, suppressClick } = useImageZoom(transient);
+function CatalogImage({ url, alt, t, eager, preview = false, active = true, open }: { url: string; alt: string; t: Copy; eager: boolean; preview?: boolean; active?: boolean; open?: () => void }) {
+  const { surface, view, style, reset, toggle, suppressClick } = useImageZoom();
   useEffect(() => { if (!active) reset(); }, [active, reset]);
   return <div ref={surface} className={`pinch-surface ${view.scale > 1 ? 'is-zoomed' : ''}`} onClick={event => {
     if (!(event.target as HTMLElement).closest('button') && !suppressClick()) open?.();
-  }} onDoubleClick={event => { if (!transient) { event.preventDefault(); toggle(); } }}>
+  }} onDoubleClick={event => { if (!preview) { event.preventDefault(); toggle(); } }}>
     <div className="pinch-content" style={style}><RemoteImage src={url} alt={alt} t={t} loading={eager ? 'eager' : 'lazy'}/></div>
-    {!transient && active && <button className="icon-button image-zoom-control" aria-label={view.scale > 1 ? t.resetZoom : t.zoom} onClick={toggle}><Icon name="zoom" size={18}/></button>}
+    {active && (!preview || view.scale > 1) && <button className="icon-button image-zoom-control" aria-label={view.scale > 1 ? t.resetZoom : t.zoom} onClick={toggle}><Icon name={view.scale > 1 ? 'close' : 'zoom'} size={18}/></button>}
   </div>;
 }
 
@@ -88,7 +88,7 @@ function ZoomViewer({ booth, t, initialIndex, close }: { booth: Booth; t: Copy; 
       const next = Math.max(0, Math.min(booth.gallery.length - 1, Math.round(el.scrollLeft / el.clientWidth)));
       selected.current = next; setIndex(next);
     }}>
-      {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><CatalogImage url={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} eager={Math.abs(i - index) <= 1} transient={false} active={i === index}/></div>)}
+      {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><CatalogImage url={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} eager={Math.abs(i - index) <= 1} active={i === index}/></div>)}
     </div>
     <div className="zoom-navigation"><button className="icon-button" disabled={index === 0} aria-label={t.previous} onClick={() => scroll(selected.current - 1)}><Icon name="left"/></button><span>{index + 1} / {booth.gallery.length}</span><button className="icon-button" disabled={index >= booth.gallery.length - 1} aria-label={t.next} onClick={() => scroll(selected.current + 1)}><Icon name="right"/></button></div>
   </dialog>;
@@ -124,7 +124,7 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); event.stopPropagation(); scroll(index + (event.key === 'ArrowRight' ? 1 : -1)); }
       if (event.key === 'Enter') { event.preventDefault(); setZoom(true); }
     }}>
-      {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><CatalogImage url={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} eager={i === 0} transient open={() => setZoom(true)}/></div>)}
+      {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><CatalogImage url={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} eager={i === 0} preview active={i === index} open={() => setZoom(true)}/></div>)}
     </div>
     <span className="catalog-label"><Icon name="image" size={14}/> {t.catalog}</span>
     <span className="image-counter"><span key={index} className="counter-tick">{index + 1}</span> / {booth.gallery.length}</span>

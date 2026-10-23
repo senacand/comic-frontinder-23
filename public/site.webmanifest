@@ -1,7 +1,7 @@
 {
   "id": "./",
   "name": "Comic Frontinder",
-  "short_name": "Frontinder",
+  "short_name": "Comic Frontinder",
   "description": "Cari booth yang match sama kamu di Comifuro 23 lewat katalog dan rekomendasi sesuai fandom kamu.",
   "lang": "id",
   "start_url": "./#/discover",
