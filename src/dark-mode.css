@@ -1,0 +1,62 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f2ecf6;
+    background: #17141d;
+    --pink: #be3e70;
+    --muted: #b8abc3;
+    --line: #3c3348;
+    --surface: #231e2c;
+    --raised: #332a40;
+    --accent-text: #d7bbed;
+  }
+
+  ::selection { background: #6d457e; color: #fff; }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline-color: #d0a9ed; }
+  .site-header, .main-nav, .booth-card, .result-card, .filter-row button,
+  .save-button, .show-more, .detail-dialog { background: var(--surface); }
+  .brand-accent { color: #f09cbe; }
+  .main-nav > a.active, .filter-row button.active { background: #3d2c50; color: #e0c3f7; }
+  .main-nav > a:hover { background: var(--raised); }
+  .nav-count, .collection-count { background: #4a345e; color: #ead7fc; }
+  .language-switch { background: #18131f; }
+  .language-switch button[aria-pressed=true] { background: #40334d; color: #f2ecf6; box-shadow: 0 1px 3px #0003; }
+
+  .gallery, .remote-image, .result-preview .image-failure { background: #15111c; }
+  .image-placeholder {
+    color: #8c779f;
+    background-image: linear-gradient(100deg, #1b1522 30%, #2c2335 50%, #1b1522 70%);
+  }
+  .catalog-label, .gallery-arrow, .zoom-button, .rank-badge { background: #2e2539ee; color: #eee3f7; }
+  .image-counter { background: #100c17dc; }
+  .gallery-arrow:hover:not(:disabled), .zoom-button:hover { background: #4b355a; }
+  .gallery-dots { background: #100c17a6; }
+  .icon-button { background: var(--raised); color: var(--accent-text); }
+  .booth-location, .source-link, .text-button { color: #d3b3eb; }
+
+  .fandom-tag { background: #39294c; color: #ddc2fa; }
+  .tag-1 { background: #48283a; color: #f4b0cd; }
+  .tag-2 { background: #2e3923; color: #c5db9e; }
+  .tag-3 { background: #26374a; color: #b3d4f3; }
+  .tag-more { background: var(--raised); color: #d6c4e6; }
+  .explore-card .tag-more:hover { background: #4a365d; }
+  .pass-button { background: var(--surface); border-color: #574364; color: #d8bdea; }
+  .pass-button:hover { background: #3b2b4b; }
+  .like-button:hover { background: #cf4b7f; }
+  .empty-symbol { background: #352642; color: #c8a6e2; }
+  .primary-button.is-saved { background: #3c2b4d; color: #e0c3f7; }
+  .error-details pre, .card-skeleton > div, .card-skeleton > span { background: #2d2437; }
+  .map-button { background: #39284b; color: #dfc2f5; border-color: #584068; }
+  .map-button:hover:not(:disabled) { background: #49325e; }
+  .filter-row button.active { border-color: #664a7b; }
+  .save-button { color: #c5a3df; }
+  .save-button.saved { background: #48263b; border-color: #713d57; color: #f4b0cd; }
+  .unavailable { color: #d5af9f; }
+
+  .detail-dialog { color: #f2ecf6; }
+  .detail-toolbar { background: #231e2cf5; }
+  .detail-dialog::backdrop { background: #08060cc7; }
+  .discovery-center:has(.like-button:hover) .explore-card,
+  .discovery-center:has(.like-button:focus-visible) .explore-card { border-color: #b2517e; box-shadow: 0 0 0 3px #8a365b40; }
+  .discovery-center:has(.pass-button:hover) .explore-card,
+  .discovery-center:has(.pass-button:focus-visible) .explore-card { border-color: #9b74bb; box-shadow: 0 0 0 3px #78549b40; }
+}

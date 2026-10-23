@@ -35,6 +35,30 @@ async function navigate(hash: string) {
 }
 
 describe('app interactions', () => {
+  it('shows the strongest fandom interests before the tag cutoff across views', async () => {
+    const featured = booth('a', [1, 2, 3, 4, 5, 6, 7]);
+    const v = records.get('visitor') as Visitor;
+    v.batches = [[{ booth: featured, reason: 'learning' }]];
+    v.decisions = {
+      liked: { kind: 'like', at: 1, fandomIds: [7] },
+      passed: { kind: 'pass', at: 1, fandomIds: [1] },
+    };
+    v.saved = { a: featured };
+    records.set('snapshot', snapshot([featured]));
+    const tags = () => [...document.querySelectorAll('.fandom-tag:not(.tag-more)')].map(tag => tag.textContent);
+    await mount();
+    expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5']);
+    fireEvent.click(document.querySelector('.tag-more')!);
+    expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5', 'Fandom 6', 'Fandom 1']);
+    expect(featured.fandomIds).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    await navigate('#/saved');
+    expect(tags()[0]).toBe('Fandom 7');
+    fireEvent.click(screen.getByRole('button', { name: 'Katalog: Circle a' }));
+    expect([...screen.getByRole('dialog').querySelectorAll('.fandom-tag')][0].textContent).toBe('Fandom 7');
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup' }));
+    await navigate('#/recommendations');
+    expect(tags()).toEqual(['Fandom 7']);
+  });
   it('starts in Indonesian, changes language, persists it, and supports keyboard likes', async () => {
     await mount();
     expect(screen.getByRole('button', { name: /Suka/ })).toBeTruthy();
