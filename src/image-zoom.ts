@@ -19,6 +19,7 @@ export function useImageZoom() {
     let start = { x: 0, y: 0 }, last = start;
     let pinch: { distance: number; scale: number; anchorX: number; anchorY: number } | undefined;
     let moved = false, interacting = false;
+    const isControl = (event: TouchEvent) => event.target instanceof Element && !!event.target.closest('button, a, input, select, textarea');
     const prevent = (event: TouchEvent) => { if (event.cancelable) event.preventDefault(); };
     const constrain = (scale: number, x: number, y: number): View => ({
       scale, x: Math.max(-el.clientWidth * (scale - 1) / 2, Math.min(el.clientWidth * (scale - 1) / 2, x)),
@@ -34,6 +35,7 @@ export function useImageZoom() {
       interacting = true; moved = true;
     };
     const onStart = (event: TouchEvent) => {
+      if (isControl(event)) return;
       if (event.touches.length >= 2) { startPinch(event.touches); prevent(event); }
       else if (event.touches.length === 1) {
         start = last = { x: event.touches[0].clientX, y: event.touches[0].clientY };
@@ -42,6 +44,7 @@ export function useImageZoom() {
       }
     };
     const onMove = (event: TouchEvent) => {
+      if (isControl(event)) return;
       if (event.touches.length >= 2) {
         prevent(event);
         if (!pinch) startPinch(event.touches);
@@ -61,6 +64,7 @@ export function useImageZoom() {
       }
     };
     const onEnd = (event: TouchEvent) => {
+      if (isControl(event)) return;
       if (moved || interacting) suppressUntil.current = Date.now() + 500;
       if (event.touches.length < 2) {
         pinch = undefined;

@@ -32,9 +32,9 @@ function CatalogImage({ url, alt, t, eager, preview = false, active = true, open
   useEffect(() => { if (!active) reset(); }, [active, reset]);
   return <div ref={surface} className={`pinch-surface ${view.scale > 1 ? 'is-zoomed' : ''}`} onClick={event => {
     if (!(event.target as HTMLElement).closest('button') && !suppressClick()) open?.();
-  }} onDoubleClick={event => { if (!preview) { event.preventDefault(); toggle(); } }}>
+  }} onDoubleClick={event => { if (!preview && !(event.target as Element).closest('button')) { event.preventDefault(); toggle(); } }}>
     <div className="pinch-content" style={style}><RemoteImage src={url} alt={alt} t={t} loading={eager ? 'eager' : 'lazy'}/></div>
-    {active && (!preview || view.scale > 1) && <button className="icon-button image-zoom-control" aria-label={view.scale > 1 ? t.resetZoom : t.zoom} onClick={toggle}><Icon name={view.scale > 1 ? 'close' : 'zoom'} size={18}/></button>}
+    {active && (!preview || view.scale > 1) && <button className="icon-button image-zoom-control" aria-label={view.scale > 1 ? t.resetZoom : t.zoom} onClick={event => { event.stopPropagation(); if (view.scale > 1) reset(); else toggle(); }}><Icon name={view.scale > 1 ? 'close' : 'zoom'} size={18}/></button>}
   </div>;
 }
 
@@ -122,7 +122,7 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
       setIndex(selected.current);
     }} tabIndex={0} aria-label={`${t.catalog}: ${booth.name}`} onDoubleClick={() => setZoom(true)} onKeyDown={event => {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); event.stopPropagation(); scroll(index + (event.key === 'ArrowRight' ? 1 : -1)); }
-      if (event.key === 'Enter') { event.preventDefault(); setZoom(true); }
+      if (event.key === 'Enter' && event.target === event.currentTarget) { event.preventDefault(); setZoom(true); }
     }}>
       {booth.gallery.map((url, i) => <div className="gallery-slide" key={`${url}:${i}`}><CatalogImage url={url} alt={`${booth.name} · ${t.catalog} ${i + 1}`} t={t} eager={i === 0} preview active={i === index} open={() => setZoom(true)}/></div>)}
     </div>
@@ -133,7 +133,6 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
       <button className="gallery-arrow gallery-next" aria-label={t.next} disabled={index >= booth.gallery.length - 1} onClick={() => scroll(index + 1)}><Icon name="right"/></button>
     </>}
     <button ref={opener} className="zoom-button" aria-label={t.zoom} onClick={() => setZoom(true)}><Icon name="zoom" size={18}/></button>
-    {booth.gallery.length > 1 && <div className="gallery-progress" aria-hidden="true"><span style={{ transform: `scaleX(${(index + 1) / booth.gallery.length})` }}/></div>}
     <div className="gallery-dots" role="group" aria-label={t.catalogPages}>{booth.gallery.length > 1 && booth.gallery.length <= 12 && booth.gallery.map((_, i) => <button className={i === index ? 'active' : ''} key={i} aria-label={`${t.catalog} ${i + 1}`} aria-pressed={i === index} onClick={() => scroll(i)}/>)}</div>
     {zoom && <ZoomViewer booth={booth} t={t} initialIndex={index} close={next => { setZoom(false); scroll(next, true); opener.current?.focus(); }}/>}
   </div>;

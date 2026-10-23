@@ -43,8 +43,6 @@
 .gallery-arrow:active:not(:disabled), .zoom-button:active { transform: scale(.88); }
 .zoom-button:hover { background: #f8eae8; transform: rotate(-8deg) scale(1.08); }
 .counter-tick { display: inline-block; animation: counter-tick 220ms cubic-bezier(.2, 1.3, .5, 1); }
-.gallery-progress { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #b5989330; pointer-events: none; }
-.gallery-progress > span { display: block; height: 100%; width: 100%; transform-origin: left; background: linear-gradient(90deg, #d4a199, #ee8f80); transition: transform 350ms cubic-bezier(.2, .8, .3, 1); }
 .gallery-dots { gap: 0; padding: 1px 4px; bottom: 12px; backdrop-filter: blur(8px); }
 .gallery-dots > button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; background: none; border-radius: 50%; }
 .gallery-dots > button::after { content: ''; display: block; width: 5px; height: 5px; border-radius: 10px; background: #ffffff99; transition: width 220ms, transform 200ms; }

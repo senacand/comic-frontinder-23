@@ -57,9 +57,33 @@ it('keeps Discover zoom after a pinch, suppresses accidental opening, and offers
   expect(content.style.transform).toContain('scale(2)');
   fireEvent.click(surface);
   expect(screen.queryByRole('dialog')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Reset image zoom' }));
+  const reset = screen.getByRole('button', { name: 'Reset image zoom' });
+  const tap = new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [finger(250)] as unknown as Touch[] });
+  fireEvent(reset, tap);
+  expect(tap.defaultPrevented).toBe(false);
+  fireEvent.touchEnd(reset, { touches: [] });
+  fireEvent.keyDown(reset, { key: 'Enter' });
+  expect(screen.queryByRole('dialog')).toBeNull();
+  fireEvent.click(reset);
   expect(content.style.transform).toContain('scale(1)');
   expect(screen.queryByRole('button', { name: 'Reset image zoom' })).toBeNull();
+});
+
+it('allows native taps on the reset control inside the full-screen viewer', () => {
+  render(<Gallery booth={catalog} t={copy.en}/>);
+  fireEvent.click(screen.getByAltText('Circle a · Catalog 1'));
+  const surface = screen.getByRole('dialog').querySelector('.pinch-surface')!; size(surface);
+  fireEvent.touchStart(surface, { touches: [finger(100), finger(200)] });
+  fireEvent.touchMove(surface, { touches: [finger(50), finger(250)] });
+  fireEvent.touchEnd(surface, { touches: [] });
+  const reset = screen.getByRole('button', { name: 'Reset image zoom' });
+  const tap = new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [finger(250)] as unknown as Touch[] });
+  fireEvent(reset, tap);
+  expect(tap.defaultPrevented).toBe(false);
+  fireEvent.touchEnd(reset, { touches: [] });
+  fireEvent.click(reset);
+  expect((surface.querySelector('.pinch-content') as HTMLElement).style.transform).toBe('translate(0px, 0px) scale(1)');
+  expect(screen.getByRole('dialog')).toBeTruthy();
 });
 
 it('retains the selected zoom page when the viewport width changes', () => {
