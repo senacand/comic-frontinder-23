@@ -31,7 +31,7 @@
   .gallery-arrow:hover:not(:disabled), .zoom-button:hover { background: #4b355a; }
   .gallery-dots { background: #100c17a6; }
   .icon-button { background: var(--raised); color: var(--accent-text); }
-  .booth-location, .source-link, .text-button { color: #d3b3eb; }
+  .booth-location, .booth-map-link, .source-link, .text-button { color: #d3b3eb; }
 
   .fandom-tag { background: #39294c; color: #ddc2fa; }
   .tag-1 { background: #48283a; color: #f4b0cd; }

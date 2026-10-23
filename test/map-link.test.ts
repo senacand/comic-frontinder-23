@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creatorListMapUrl } from '../src/map-link';
+import { creatorListMapUrl, creatorMapUrl } from '../src/map-link';
 
 export function decodeMapIds(url: string) {
   let code = new URL(url).searchParams.get('list')!.replaceAll('-', '+').replaceAll('_', '/');
@@ -16,6 +16,10 @@ export function decodeMapIds(url: string) {
 }
 
 describe('creator list map links', () => {
+  it('links directly to a selected booth without creating a custom list', () => {
+    expect(creatorMapUrl('1000004')).toBe('https://cf23.nnt.gg/?creator_id=1000004');
+    for (const id of ['', '-1', 'a', '1.5', '2147483648']) expect(creatorMapUrl(id)).toBeUndefined();
+  });
   it('matches the map delta-varint/base64url format', () => {
     expect(creatorListMapUrl(['130', '2', '1', '2'])).toBe('https://cf23.nnt.gg/?list=AQGAAQ');
     expect(creatorListMapUrl(['1'])).toBe('https://cf23.nnt.gg/?list=AQ');

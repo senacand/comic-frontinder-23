@@ -72,6 +72,8 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 .location-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .booth-location { display: flex; align-items: center; gap: 5px; color: #775b8f; font-size: 13px; font-weight: 600; }
 .attendance { color: var(--muted); font-size: 12px; }
+.booth-map-link { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; color: #775b8f; font-size: 11px; font-weight: 600; }
+.booth-map-link:hover { text-decoration: underline; }
 .fandom-section { margin-top: 24px; }
 .mini-label { color: var(--muted); font-size: 10px; font-weight: 600; }
 .fandom-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
@@ -80,6 +82,13 @@ article.booth-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 .tag-2 { background: #eaf0dd; color: #657c40; }
 .tag-3 { background: #e6eff8; color: #4e7394; }
 .tag-more { background: #f1eef3; color: #75617f; font-weight: 600; }
+@media (min-width: 761px) {
+  .tag-more { display: none; }
+  .results-grid .result-card .fandom-tags { max-height: none; overflow: visible; }
+}
+@media (max-width: 760px) {
+  .fandom-tags:not(.expanded) .tag-overflow { display: none; }
+}
 .decision-controls { flex: 0 0 52px; display: flex; justify-content: center; gap: 12px; width: min(100%, 500px); align-self: center; }
 .decision-controls > button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; height: 52px; font-size: 14px; font-weight: 600; border-radius: 12px; transition: background .15s; }
 .pass-button { background: white; border: 1px solid #ded4e5; color: #7e6b8d; }

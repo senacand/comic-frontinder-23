@@ -35,6 +35,29 @@ async function navigate(hash: string) {
 }
 
 describe('app interactions', () => {
+  it('links each booth to its map selection across discovery, collections, and details', async () => {
+    const featured = booth('1000004');
+    const v = records.get('visitor') as Visitor;
+    v.batches = [[{ booth: featured, reason: 'learning' }]];
+    v.saved = { [featured.id]: featured };
+    v.decisions = { seed: { kind: 'like', at: 1, fandomIds: [1] } };
+    records.set('snapshot', snapshot([featured]));
+    const expectMapLink = (container: ParentNode = document) => {
+      const link = container.querySelector('a.booth-map-link')!;
+      expect(link.getAttribute('href')).toBe('https://cf23.nnt.gg/?creator_id=1000004');
+      expect(link.getAttribute('target')).toBe('_blank');
+    };
+    await mount();
+    expectMapLink();
+    for (const page of ['recommendations', 'saved']) {
+      await navigate('#/' + page);
+      expectMapLink();
+      fireEvent.click(screen.getByRole('button', { name: 'Katalog: Circle 1000004' }));
+      expectMapLink(screen.getByRole('dialog'));
+      fireEvent.click(screen.getByRole('button', { name: 'Tutup' }));
+    }
+    expect(controller.getSnapshot().visitor.decisions).toEqual(v.decisions);
+  });
   it('shows the strongest fandom interests before the tag cutoff across views', async () => {
     const featured = booth('a', [1, 2, 3, 4, 5, 6, 7]);
     const v = records.get('visitor') as Visitor;
@@ -45,9 +68,12 @@ describe('app interactions', () => {
     };
     v.saved = { a: featured };
     records.set('snapshot', snapshot([featured]));
-    const tags = () => [...document.querySelectorAll('.fandom-tag:not(.tag-more)')].map(tag => tag.textContent);
+    const tags = () => [...document.querySelectorAll('.fandom-tag:not(.tag-more)')]
+      .filter(tag => !tag.classList.contains('tag-overflow') || tag.parentElement?.classList.contains('expanded'))
+      .map(tag => tag.textContent);
     await mount();
     expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5']);
+    expect(document.querySelectorAll('.tag-overflow')).toHaveLength(2);
     fireEvent.click(document.querySelector('.tag-more')!);
     expect(tags()).toEqual(['Fandom 7', 'Fandom 2', 'Fandom 3', 'Fandom 4', 'Fandom 5', 'Fandom 6', 'Fandom 1']);
     expect(featured.fandomIds).toEqual([1, 2, 3, 4, 5, 6, 7]);

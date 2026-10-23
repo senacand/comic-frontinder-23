@@ -1,16 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Copy } from './copy';
 import type { Booth } from './types';
 import { Icon } from './icons';
 import { useReducedMotion } from './explore-motion';
 
-export function RemoteImage({ src, alt, t, ...props }: { src: string; alt: string; t: Copy; loading?: 'lazy' | 'eager'; className?: string }) {
+type RemoteImageProps = { src: string; alt: string; t: Copy; loading?: 'lazy' | 'eager'; className?: string };
+
+export function RemoteImage(props: RemoteImageProps) {
+  return <ImageRequest key={props.src} {...props}/>;
+}
+
+function ImageRequest({ src, alt, t, ...props }: RemoteImageProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
-  useEffect(() => { setFailed(false); setLoaded(false); setRetry(0); }, [src]);
+  // Preloaded images can finish before mount. Never reset their load state in a
+  // passive effect: it can run after onLoad and leave the placeholder visible.
+  const imageRef = useCallback((image: HTMLImageElement | null) => {
+    if (image?.complete && image.naturalWidth > 0) setLoaded(true);
+  }, []);
   return <div className={`remote-image ${loaded ? 'is-loaded' : ''} ${props.className ?? ''}`}>
-    {!failed && <img key={`${src}:${retry}`} src={src} alt={alt} loading={props.loading ?? 'lazy'} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
+    {!failed && <img ref={imageRef} key={`${src}:${retry}`} src={src} alt={alt} loading={props.loading ?? 'lazy'} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
     {!loaded && !failed && <span className="image-placeholder"><Icon name="image" size={28}/></span>}
     {failed && <div className="image-failure"><Icon name="image" size={28}/><span>{t.imageError}</span><button className="text-button" onClick={() => { setFailed(false); setLoaded(false); setRetry(retry + 1); }}>{t.imageRetry}</button></div>}
   </div>;

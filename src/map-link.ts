@@ -1,5 +1,12 @@
 const MAP_URL = 'https://cf23.nnt.gg/';
 
+export function creatorMapUrl(id: string): string | undefined {
+  if (!/^\d+$/.test(id) || !Number.isSafeInteger(Number(id)) || Number(id) > 0x7fffffff) return undefined;
+  const url = new URL(MAP_URL);
+  url.searchParams.set('creator_id', String(Number(id)));
+  return url.toString();
+}
+
 // Matches the map's IntEncoding: sorted IDs, delta varints, unpadded base64url.
 export function creatorListMapUrl(ids: string[]): string | undefined {
   const numbers = [...new Set(ids.filter(id => /^\d+$/.test(id)).map(Number))]

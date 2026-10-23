@@ -4,7 +4,7 @@ import { copy, type Copy } from './copy';
 import { catalogProfile, recommendations } from './engine';
 import { Gallery, RemoteImage } from './Gallery';
 import { Icon } from './icons';
-import { creatorListMapUrl } from './map-link';
+import { creatorListMapUrl, creatorMapUrl } from './map-link';
 import { useDecisionMotion } from './explore-motion';
 import { Reaction } from './Reaction';
 import type { Booth, InterestProfile, Language, Page, Snapshot } from './types';
@@ -21,20 +21,21 @@ function Fandoms({ booth, snapshot, profile, t, matching }: { booth: Booth; snap
   if (!ids.length) return null;
   return <div className="fandom-section">
     <span className="mini-label">{matching ? t.match : t.fandoms}</span>
-    <div className="fandom-tags">{(expanded ? ids : ids.slice(0, 5)).map((id, i) => <span className={`fandom-tag tag-${i % 4}`} key={id}>{names.get(id) ?? id}</span>)}
+    <div className={`fandom-tags ${expanded ? 'expanded' : ''}`}>{ids.map((id, i) => <span className={`fandom-tag tag-${i % 4} ${i >= 5 ? 'tag-overflow' : ''}`} key={id}>{names.get(id) ?? id}</span>)}
       {ids.length > 5 && <button className="fandom-tag tag-more" aria-expanded={expanded} aria-label={expanded ? t.less : t.moreFandoms} onClick={() => setExpanded(!expanded)}>{expanded ? '−' : `+${ids.length - 5}`}</button>}
     </div>
   </div>;
 }
 
 function Location({ booth, t, language }: { booth: Booth; t: Copy; language: Language }) {
+  const mapUrl = creatorMapUrl(booth.id);
   const dates = booth.days.map(day => {
     if (day === '2026-10-31') return t.day1;
     if (day === '2026-11-01') return t.day2;
     const date = new Date(`${day}T12:00:00Z`);
     return Number.isNaN(date.getTime()) ? day : new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
   });
-  return <div className="location-row"><span className="booth-location"><Icon name="pin" size={16}/>{booth.spaces.join(' / ') || '—'}</span>{dates.length > 0 && <span className="attendance">{dates.join(' · ')}</span>}</div>;
+  return <div className="location-row"><span className="booth-location"><Icon name="pin" size={16}/>{booth.spaces.join(' / ') || '—'}</span>{dates.length > 0 && <span className="attendance">{dates.join(' · ')}</span>}{mapUrl && <a className="booth-map-link" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`${t.openInMap}: ${booth.name}`}>{t.openInMap}<Icon name="external" size={13}/></a>}</div>;
 }
 
 function Empty({ icon = 'sparkle', title, body, children }: { icon?: string; title: string; body: string; children?: React.ReactNode }) {
