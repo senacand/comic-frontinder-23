@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs><linearGradient id="wash" x2="1" y2="1"><stop stop-color="#fcf4fa"/><stop offset="1" stop-color="#eee8fa"/></linearGradient><pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#b9a3ce" opacity=".22"/></pattern></defs>
+<rect width="1200" height="630" fill="url(#wash)"/>
+<rect x="740" width="460" height="630" fill="url(#dots)"/>
+<circle cx="1190" cy="30" r="205" fill="#e8edcc"/><circle cx="780" cy="650" r="150" fill="#f5d7e5"/>
+<rect x="72" y="56" width="48" height="48" rx="15" fill="#ce4d81"/>
+<path transform="translate(10 1)" d="M86 91 73 78C64 68 80 62 86 72 93 62 108 68 99 78Z" fill="#fff9ee"/>
+<rect x="72" y="174" width="216" height="36" rx="18" fill="#e9e0f3"/>
+<g transform="rotate(-8 949 329)"><rect x="801" y="127" width="300" height="395" rx="26" fill="#d8c8ec" stroke="#bda5d4" stroke-width="2"/></g>
+<g transform="rotate(7 968 331)"><rect x="825" y="145" width="294" height="395" rx="26" fill="#fff" stroke="#e2d7e9" stroke-width="2"/>
+<rect x="840" y="160" width="264" height="264" rx="18" fill="#f9e0ea"/>
+<circle cx="971" cy="285" r="92" fill="#fff2f7"/>
+<path d="M971 346 914 290C875 246 942 214 971 257 1001 214 1067 246 1028 290Z" fill="#e96995"/>
+<path d="m868 202 5-13 5 13 13 5-13 5-5 13-5-13-13-5Z" fill="#bba0d5"/>
+<circle cx="1068" cy="381" r="10" fill="#bdcf81"/>
+<rect x="848" y="450" width="155" height="12" rx="6" fill="#5c466b"/>
+<rect x="848" y="478" width="104" height="23" rx="11.5" fill="#ece4f4"/>
+<rect x="963" y="478" width="75" height="23" rx="11.5" fill="#e9eecf"/>
+</g>
+<circle cx="856" cy="548" r="38" fill="#fff" stroke="#ded0e8" stroke-width="2"/><path d="m845 537 22 22m0-22-22 22" stroke="#9470b3" stroke-width="5" stroke-linecap="round"/>
+<circle cx="1074" cy="548" r="38" fill="#ce4d81" stroke="#fff" stroke-width="6"/><path transform="translate(0 -4)" d="M1074 571 1058 555C1047 543 1066 533 1074 545 1082 533 1101 543 1090 555Z" fill="#fff"/>
+<g font-family="Plus Jakarta Sans, sans-serif">
+<text x="136" y="90" font-size="31" font-weight="700" fill="#392b46">Comic Frontinder</text>
+<text x="180" y="197" text-anchor="middle" font-size="14" font-weight="700" fill="#76528f">COMIC FRONTIER 23</text>
+<text x="72" y="300" font-size="58" font-weight="700" fill="#392b46">Cari booth yang</text>
+<text x="72" y="366" font-size="58" font-weight="700" fill="#be3e70">match sama kamu.</text>
+<text x="74" y="430" font-size="23" font-weight="500" fill="#766380">Siapa tau pulang-pulang bawa loot baru</text>
+<text x="74" y="560" font-size="17" font-weight="500" fill="#867393">comicfrontinder.sena.dev</text>
+</g>
+</svg>

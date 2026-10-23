@@ -7,6 +7,8 @@ import path from 'node:path';
 const dist = path.resolve(fileURLToPath(new URL('../dist/', import.meta.url)));
 const html = await readFile(path.join(dist, 'index.html'), 'utf8');
 const assets = [...html.matchAll(/(?:src|href)="(\.\/[^\"]+)"/g)].map(match => match[1]);
+const manifest = JSON.parse(await readFile(path.join(dist, 'site.webmanifest'), 'utf8'));
+assets.push(...manifest.icons.map(icon => icon.src), './social-card.png', './robots.txt', './sitemap.xml');
 assert(assets.some(p => p.endsWith('.js')), 'HTML must use relative JavaScript URLs');
 assert(assets.some(p => p.endsWith('.css')), 'HTML must use relative stylesheet URLs');
 assert(!/(?:src|href)="\/[^/]/.test(html), 'No root-relative assets');
@@ -23,7 +25,8 @@ const server = createServer(async (request, response) => {
     const target = path.resolve(dist, `.${decodeURIComponent(route)}`);
     if (!target.startsWith(dist + path.sep)) { response.writeHead(403).end(); return; }
     const body = await readFile(target);
-    response.setHeader('Content-Type', target.endsWith('.js') ? 'application/javascript' : target.endsWith('.css') ? 'text/css' : target.endsWith('.svg') ? 'image/svg+xml' : 'text/html');
+    const types = { '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml', '.txt': 'text/plain' };
+    response.setHeader('Content-Type', types[path.extname(target)] ?? 'text/html');
     response.end(body);
   } catch { response.writeHead(404).end(); }
 });
@@ -41,6 +44,6 @@ try {
     const response = await fetch(new URL(workerUrl.pathname.slice(1), base));
     assert.equal(response.status, 200, 'Worker must resolve from the deployment path');
     assert.equal(response.headers.get('content-type'), 'application/javascript');
-    console.log(`PASS ${prefix}: HTML, hash routes, stylesheet, icon, JS, and worker served`);
+    console.log(`PASS ${prefix}: HTML, hash routes, stylesheet, social image, app icons, manifest, sitemap, JS, and worker served`);
   }
 } finally { await new Promise(resolve => server.close(resolve)); }

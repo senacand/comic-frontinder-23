@@ -46,9 +46,13 @@ After committing the app and workflow, push the branch:
 git push -u origin master
 ```
 
-The expected project URL is `https://senacand.github.io/comic-frontinder-23/`. The workflow reports the deployed URL in its `github-pages` environment. No personal access token or repository secrets are required; deployment uses the workflow's GitHub token with Pages and OIDC permissions scoped to the deploy job.
+The public URL is `https://comicfrontinder.sena.dev/`. Configure the custom domain in GitHub Pages settings and its DNS records when setting up hosting. The workflow reports the deployed URL in its `github-pages` environment. No personal access token or repository secrets are required; deployment uses the workflow's GitHub token with Pages and OIDC permissions scoped to the deploy job.
 
 For another static host, run `npm ci` and `npm run build` from the project root, then publish **the contents of `dist/`**.
+
+Search and social metadata live in `index.html`, including Indonesian preview copy, Open Graph and X cards, and WebSite/WebApplication structured data. `public/social-card.png` is the 1200 × 630 sharing image; `public/social-card.svg` is its editable source, using Plus Jakarta Sans. Home-screen icons and `site.webmanifest` support app shortcuts without a service worker or offline catalog.
+
+Canonical, sharing, and sitemap URLs use `https://comicfrontinder.sena.dev/`. If the public hostname or deployment path changes, update those absolute URLs in `index.html`, `public/robots.txt`, and `public/sitemap.xml`, and update the address printed in the sharing artwork. Keep asset links and manifest paths relative. Hash pages share the app’s preview because crawlers request the same HTML for every hash; recommendations and likes stay private to the visitor’s browser.
 
 Vite uses `base: './'`, so the same build works at a hostname root or a project path such as `https://senacand.github.io/comic-frontinder-23/`. Hash navigation needs no rewrite rules or `404.html` fallback. Serve JavaScript, including the worker, with a JavaScript MIME type. Use HTTPS in production. No server environment variables, secrets, backend, or build-time catalog copy is needed.
 
