@@ -114,6 +114,32 @@ describe('app interactions', () => {
     expect((records.get('visitor') as Visitor).language).toBe('en');
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Circle b' })).toBeTruthy());
   });
+  it('navigates Discover from the page or buttons without interfering with editing or zoom', async () => {
+    await mount();
+    const track = screen.getByLabelText('Katalog: Circle a');
+    Object.defineProperty(track, 'clientWidth', { value: 400 });
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(track.scrollLeft).toBe(400);
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(track.scrollLeft).toBe(400);
+    fireEvent.keyDown(screen.getByRole('button', { name: /Suka/ }), { key: 'ArrowLeft' });
+    expect(track.scrollLeft).toBe(0);
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+    expect(track.scrollLeft).toBe(0);
+    fireEvent.keyDown(document.body, { key: 'ArrowRight', ctrlKey: true });
+    expect(track.scrollLeft).toBe(0);
+    const input = document.createElement('input'); document.body.append(input);
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(track.scrollLeft).toBe(0); input.remove();
+    fireEvent.click(screen.getByRole('button', { name: 'Perbesar katalog' }));
+    const dialog = screen.getByRole('dialog');
+    const zoomTrack = screen.getByLabelText('Halaman katalog: Circle a');
+    Object.defineProperty(zoomTrack, 'clientWidth', { value: 400 });
+    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
+    expect(zoomTrack.scrollLeft).toBe(400);
+    expect(track.scrollLeft).toBe(0);
+    expect(controller.getSnapshot().visitor.decisions).toEqual({});
+  });
   it('keeps image navigation separate from decisions and supports zoom and retry', async () => {
     await mount();
     const track = screen.getByLabelText('Katalog: Circle a');

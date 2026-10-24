@@ -94,7 +94,7 @@ function ZoomViewer({ booth, t, initialIndex, close }: { booth: Booth; t: Copy; 
   </dialog>;
 }
 
-export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Copy; fullscreen?: boolean }) {
+export function Gallery({ booth, t, fullscreen = false, keyboardNavigation = false }: { booth: Booth; t: Copy; fullscreen?: boolean; keyboardNavigation?: boolean }) {
   const reducedMotion = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(false);
@@ -109,6 +109,19 @@ export function Gallery({ booth, t, fullscreen = false }: { booth: Booth; t: Cop
     track.current?.scrollTo({ left: target * track.current.clientWidth, behavior: immediate || reducedMotion ? 'auto' : 'smooth' });
     setIndex(target);
   };
+  useEffect(() => {
+    if (!keyboardNavigation) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || document.querySelector('dialog[open]')) return;
+      if ((event.target as Element)?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="slider"]')) return;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        scroll(selected.current + (event.key === 'ArrowRight' ? 1 : -1));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
   return <div className={`gallery ${fullscreen ? 'gallery-detail' : ''}`}>
     <div className="gallery-track" ref={track} onScroll={event => {
       const el = event.currentTarget;
